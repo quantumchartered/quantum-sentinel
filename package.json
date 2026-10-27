@@ -19,7 +19,8 @@
     "api": "pnpm --filter @sentinel/api dev",
     "audit:verify": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts audit:verify",
     "reconcile": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts reconcile",
-    "investigate": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/investigate.ts"
+    "investigate": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/investigate.ts",
+    "seed:demo": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/seed.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

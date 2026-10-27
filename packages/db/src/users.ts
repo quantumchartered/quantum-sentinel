@@ -5,6 +5,7 @@ import type { Db } from "./client.js";
 import { type UserRole, users } from "./schema.js";
 
 export type UserRow = typeof users.$inferSelect;
+export type { UserRole };
 
 const hashToken = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
 

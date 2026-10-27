@@ -1,6 +1,6 @@
 /**
- * MOCK model for tests only: a scripted stand-in for Claude that returns
- * Messages-API-shaped responses. It never calls the network.
+ * MOCK model helpers: build Messages-API-shaped responses without calling Claude.
+ * Used by tests and by the MOCK investigator. It never calls the network.
  */
 import { randomUUID } from "node:crypto";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -16,7 +16,11 @@ export function text(t: string): Block {
   return { type: "text", text: t, citations: null } as unknown as Block;
 }
 
-export function reply(content: Block[], stop: string = content.some((b) => b.type === "tool_use") ? "tool_use" : "end_turn"): ModelMessage {
+export function reply(
+  content: Block[],
+  stop: string = content.some((b) => b.type === "tool_use") ? "tool_use" : "end_turn",
+  usage: { input_tokens: number; output_tokens: number } = { input_tokens: 1_200, output_tokens: 300 },
+): ModelMessage {
   return {
     id: `msg_${randomUUID()}`,
     type: "message",
@@ -25,7 +29,7 @@ export function reply(content: Block[], stop: string = content.some((b) => b.typ
     content,
     stop_reason: stop,
     stop_sequence: null,
-    usage: { input_tokens: 1_200, output_tokens: 300 },
+    usage,
   } as unknown as ModelMessage;
 }
 
