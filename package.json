@@ -18,7 +18,8 @@
     "sandbox": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/sandbox.ts",
     "api": "pnpm --filter @sentinel/api dev",
     "audit:verify": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts audit:verify",
-    "reconcile": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts reconcile"
+    "reconcile": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts reconcile",
+    "investigate": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/investigate.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
