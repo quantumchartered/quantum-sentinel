@@ -111,7 +111,7 @@ function failureKey(f: FailureFacts): string {
   return JSON.stringify([f.code, f.message, f.type, [...f.reasonCodes].sort()]);
 }
 
-function observationKey(o: TransferObservation): string {
+export function observationDedupKey(o: TransferObservation): string {
   if (o.eventId) return `event:${o.eventId}`;
   return `snap:${o.source}:${o.rawStatus}:${o.failure ? failureKey(o.failure) : "-"}`;
 }
@@ -121,8 +121,8 @@ function hasFacts(f: FailureFacts | null): f is FailureFacts {
 }
 
 export function applyObservation(h: TransferHistory, o: TransferObservation): TransferHistory {
-  const key = observationKey(o);
-  if (h.observations.some((x) => observationKey(x) === key)) return h; // duplicate delivery
+  const key = observationDedupKey(o);
+  if (h.observations.some((x) => observationDedupKey(x) === key)) return h; // duplicate delivery
 
   const statusesSeen = h.statusesSeen.includes(o.rawStatus) ? h.statusesSeen : [...h.statusesSeen, o.rawStatus];
   let failures = h.failures;

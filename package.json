@@ -11,7 +11,10 @@
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "check": "pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "test:integration": "pnpm db:up && vitest run -c vitest.integration.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
