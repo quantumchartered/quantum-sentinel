@@ -1,0 +1,13 @@
+{
+  "name": "@sentinel/airwallex",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./simulation": "./src/simulation.ts"
+  },
+  "dependencies": {
+    "@sentinel/contracts": "workspace:*",
+    "zod": "^4.1.0"
+  }
+}
