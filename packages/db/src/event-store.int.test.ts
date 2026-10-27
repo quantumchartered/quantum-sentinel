@@ -1,36 +1,26 @@
-import { randomUUID } from "node:crypto";
 import { type TransferSnapshot, TransferSchema, normalizeTransfer, signWebhook } from "@sentinel/airwallex";
 import { classifyFinality } from "@sentinel/policy";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Db, createDb, migrate } from "./client.js";
+import { type Db, createDb } from "./client.js";
 import { loadTransferHistory, recordTransferSnapshot, recordWebhook } from "./event-store.js";
-import { organizations, providerEvents, providerOperations, transferObservations, webhookRejections } from "./schema.js";
+import { providerEvents, providerOperations, transferObservations, webhookRejections } from "./schema.js";
+import { createTestDb } from "./testing.js";
+import { randomUUID } from "node:crypto";
 
-const DATABASE_URL = process.env.DATABASE_URL ?? "postgres://sentinel:sentinel_local_dev@127.0.0.1:54329/sentinel";
-const schemaName = `t_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
 const SECRET = "whsec_integration";
 const NOW = Date.parse("2026-10-27T12:00:00Z");
 let db: Db;
-let admin: Db;
-const orgA = randomUUID();
-const orgB = randomUUID();
+let orgA: string;
+let orgB: string;
+let drop: () => Promise<void>;
 
 beforeAll(async () => {
-  admin = createDb({ connectionString: DATABASE_URL, max: 1 });
-  await admin.execute(sql.raw(`CREATE SCHEMA ${schemaName}`));
-  db = createDb({ connectionString: DATABASE_URL, searchPath: schemaName, max: 20 });
-  await migrate(db);
-  await db.insert(organizations).values([
-    { id: orgA, name: "Sandbox Business A" },
-    { id: orgB, name: "Sandbox Business B" },
-  ]);
+  ({ db, orgA, orgB, drop } = await createTestDb());
 });
 
 afterAll(async () => {
-  await db?.$client.end();
-  await admin?.execute(sql.raw(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`));
-  await admin?.$client.end();
+  await drop?.();
 });
 
 const transferBody = (over: Record<string, unknown> = {}) => ({

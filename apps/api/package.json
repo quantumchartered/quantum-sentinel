@@ -1,0 +1,21 @@
+{
+  "name": "@sentinel/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/main.ts"
+  },
+  "dependencies": {
+    "@sentinel/airwallex": "workspace:*",
+    "@sentinel/contracts": "workspace:*",
+    "@sentinel/db": "workspace:*",
+    "@sentinel/policy": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "fastify": "5.12.7",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
