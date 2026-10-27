@@ -103,7 +103,7 @@ export async function recordWebhook(db: Db, input: WebhookInput): Promise<Webhoo
 
 /** Record a snapshot from a poll, a create response or a reconciliation lookup. */
 export async function recordTransferSnapshot(
-  db: Db,
+  db: Db | Tx,
   organizationId: string,
   snapshot: TransferSnapshot,
   source: "poll" | "create" | "reconcile",
@@ -148,7 +148,7 @@ async function insertObservation(
 
 /** Rebuild what we know about a transfer, in the order we learned it. */
 export async function loadTransferHistory(
-  db: Db,
+  db: Db | Tx,
   organizationId: string,
   providerTransferId: string,
 ): Promise<TransferHistory> {

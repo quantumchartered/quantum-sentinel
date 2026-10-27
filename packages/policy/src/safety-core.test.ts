@@ -62,6 +62,11 @@ describe("decide (WAIT / REPLACE / ESCALATE)", () => {
     expect(decide({ ...base, original }).recommendation).toBe("ESCALATE");
   });
 
+  it("a failure without a recorded type (e.g. bare 'simulation' reason) escalates", () => {
+    const untyped: Finality = { kind: "CONFIRMED_FAILED", failure: { ...(confirmedFailed as Extract<Finality, { kind: "CONFIRMED_FAILED" }>).failure, type: null, message: "simulation" } };
+    expect(decide({ ...base, original: untyped }).reasons).toEqual(["original:failure_type_missing"]);
+  });
+
   it("another blocking payment escalates instead of replacing", () => {
     expect(decide({ ...base, otherBlockingPayments: 1 }).recommendation).toBe("ESCALATE");
   });

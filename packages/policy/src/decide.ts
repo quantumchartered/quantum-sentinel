@@ -70,6 +70,8 @@ export function decide(input: DecisionInput): Decision {
     case "CONFLICT":
       return escalate("original:conflicting_history", ...o.conflicts.map((c) => `conflict:${c}`));
     case "CONFIRMED_FAILED":
+      // Invariant 2: the failure TYPE must be recorded (e.g. a bare "simulation" reason is not enough).
+      if (!o.failure.type) return escalate("original:failure_type_missing");
       break;
   }
 
