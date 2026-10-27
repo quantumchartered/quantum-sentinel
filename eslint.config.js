@@ -12,6 +12,8 @@ export default defineConfig(
     rules: {
       "no-restricted-globals": ["error", { name: "parseFloat", message: "Parse money with majorToMinor from @sentinel/contracts." }],
       "no-restricted-properties": ["error", { object: "Number", property: "parseFloat", message: "Parse money with majorToMinor from @sentinel/contracts." }],
+      // `_`-prefixed names are intentionally unused (e.g. fields stripped by destructuring).
+      "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^_", argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" }],
     },
   },
 );
