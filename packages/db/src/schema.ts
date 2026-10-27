@@ -116,11 +116,15 @@ export const payments = pgTable("payments", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export type IncidentOrigin = "SANDBOX" | "SANDBOX_SCENARIO" | "MOCK_SCENARIO";
+
 export const incidents = pgTable("incidents", {
   id: uuid("id").primaryKey(),
   organizationId: uuid("organization_id").notNull(),
   obligationId: uuid("obligation_id").notNull(),
   originalPaymentId: uuid("original_payment_id").notNull(),
+  origin: text("origin").$type<IncidentOrigin>().notNull().default("SANDBOX"),
+  title: text("title"),
   state: text("state").$type<IncidentState>().notNull(),
   recommendation: text("recommendation").$type<Recommendation>(),
   version: integer("version").notNull().default(0),
@@ -167,6 +171,7 @@ export const proposedActions = pgTable("proposed_actions", {
   incidentVersion: integer("incident_version").notNull(),
   actionType: text("action_type").$type<"REPLACE">().notNull(),
   facts: jsonb("facts").notNull(),
+  proposedBy: text("proposed_by").notNull().default("unknown"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -258,4 +263,18 @@ export const agentRuns = pgTable("agent_runs", {
   error: text("error"),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
   finishedAt: timestamp("finished_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---- T3b users (migrations/0005_t3b_users_origin.sql) ----
+
+export type UserRole = "OWNER" | "APPROVER" | "OPERATOR" | "VIEWER";
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  displayName: text("display_name").notNull(),
+  role: text("role").$type<UserRole>().notNull(),
+  tokenSha256: text("token_sha256").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  disabledAt: timestamp("disabled_at", { withTimezone: true }),
 });

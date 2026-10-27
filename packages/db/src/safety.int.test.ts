@@ -472,3 +472,19 @@ describe("ledger and reconciliation", () => {
     expect(await paymentsForObligation(db, orgB, obligationId)).toHaveLength(0);
   });
 });
+
+describe("four-eyes", () => {
+  it("the proposer cannot approve their own proposal; a different approver can", async () => {
+    const p = new FakeProvider();
+    const s = await scenario(p);
+    await evaluateIncident(db, p, org, s.incidentId);
+    await failOriginal(p, s.origId);
+    await evaluateIncident(db, p, org, s.incidentId);
+    const proposalId = await proposeReplacement(db, org, s.incidentId, "user:alice");
+    expect(await approveProposal(db, org, { proposedActionId: proposalId, approverId: "user:alice", keys: KEYS })).toEqual({
+      ok: false,
+      reasons: ["four_eyes:approver_is_proposer"],
+    });
+    expect((await approveProposal(db, org, { proposedActionId: proposalId, approverId: "user:bob", keys: KEYS })).ok).toBe(true);
+  });
+});

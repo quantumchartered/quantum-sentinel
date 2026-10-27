@@ -23,6 +23,7 @@ import type { Db } from "./client.js";
 import { loadTransferHistory } from "./event-store.js";
 import {
   type EvidenceKind,
+  type IncidentOrigin,
   decisions,
   evidence,
   incidents,
@@ -177,7 +178,13 @@ export async function registerOriginalPayment(
   return id;
 }
 
-export async function openIncident(db: Db, organizationId: string, obligationId: string, actor = "system"): Promise<string> {
+export async function openIncident(
+  db: Db,
+  organizationId: string,
+  obligationId: string,
+  actor = "system",
+  opts: { origin?: IncidentOrigin; title?: string } = {},
+): Promise<string> {
   const id = randomUUID();
   await db.transaction(async (tx) => {
     const ob = await lockObligation(tx, organizationId, obligationId);
@@ -186,8 +193,17 @@ export async function openIncident(db: Db, organizationId: string, obligationId:
       .from(payments)
       .where(and(eq(payments.organizationId, organizationId), eq(payments.obligationId, ob.id), eq(payments.role, "ORIGINAL")));
     if (!original) throw new SafetyError("no original payment registered for this obligation");
-    await tx.insert(incidents).values({ id, organizationId, obligationId: ob.id, originalPaymentId: original.id, state: "OPEN", riskFlags: [] });
-    await appendAudit(tx, organizationId, { actor, eventType: "incident.opened", payload: { incidentId: id, obligationId: ob.id } });
+    await tx.insert(incidents).values({
+      id,
+      organizationId,
+      obligationId: ob.id,
+      originalPaymentId: original.id,
+      state: "OPEN",
+      riskFlags: [],
+      origin: opts.origin ?? "SANDBOX",
+      title: opts.title ?? null,
+    });
+    await appendAudit(tx, organizationId, { actor, eventType: "incident.opened", payload: { incidentId: id, obligationId: ob.id, origin: opts.origin ?? "SANDBOX" } });
   });
   return id;
 }
@@ -560,7 +576,7 @@ export async function proposeReplacement(db: Db, organizationId: string, inciden
     const incident = await applyTransition(tx, organizationId, locked, { type: "REQUEST_APPROVAL" }, actor);
     const facts = await currentApprovalFacts(tx, organizationId, incident, obligation, obligation.beneficiaryHash);
     const id = randomUUID();
-    await tx.insert(proposedActions).values({ id, organizationId, incidentId, incidentVersion: incident.version, actionType: "REPLACE", facts: factsToJson(facts) });
+    await tx.insert(proposedActions).values({ id, organizationId, incidentId, incidentVersion: incident.version, actionType: "REPLACE", facts: factsToJson(facts), proposedBy: actor });
     await appendAudit(tx, organizationId, { actor, eventType: "action.proposed", payload: { incidentId, proposedActionId: id, facts: factsToJson(facts) } });
     return id;
   });

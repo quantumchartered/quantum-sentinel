@@ -86,6 +86,8 @@ export async function approveProposal(
   return db.transaction(async (tx) => {
     const { obligation, incident } = await lockIncidentWithObligation(tx, organizationId, proposal.incidentId);
     if (incident.state !== "AWAITING_APPROVAL") return { ok: false, reasons: [`incident_not_awaiting_approval:${incident.state}`] };
+    // Four-eyes: whoever proposed the payment cannot also approve it.
+    if (proposal.proposedBy === input.approverId) return { ok: false, reasons: ["four_eyes:approver_is_proposer"] };
 
     const proposed = factsFromJson(proposal.facts);
     const binding: ApprovalBinding = {
