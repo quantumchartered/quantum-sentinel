@@ -16,7 +16,9 @@
     "db:down": "docker compose down",
     "test:integration": "pnpm db:up && vitest run -c vitest.integration.config.ts",
     "sandbox": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/sandbox.ts",
-    "api": "pnpm --filter @sentinel/api dev"
+    "api": "pnpm --filter @sentinel/api dev",
+    "audit:verify": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts audit:verify",
+    "reconcile": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts reconcile"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
