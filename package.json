@@ -14,7 +14,9 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
-    "test:integration": "pnpm db:up && vitest run -c vitest.integration.config.ts"
+    "test:integration": "pnpm db:up && vitest run -c vitest.integration.config.ts",
+    "sandbox": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/sandbox.ts",
+    "api": "pnpm --filter @sentinel/api dev"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
