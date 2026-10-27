@@ -4,3 +4,4 @@ export * from "./canonical.js";
 export * from "./decide.js";
 export * from "./incident.js";
 export * from "./transfer-history.js";
+export * from "./text-signals.js";

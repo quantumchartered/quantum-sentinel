@@ -234,3 +234,28 @@ export const reconciliationRuns = pgTable("reconciliation_runs", {
   ok: boolean("ok").notNull(),
   findings: jsonb("findings").notNull(),
 });
+
+// ---- T3a agent runs (migrations/0004_t3a_agent_runs.sql) ----
+
+export type AgentRunStatus = "COMPLETED" | "REPORT_REJECTED" | "REFUSED" | "AI_UNAVAILABLE" | "LIMIT_EXCEEDED" | "NO_REPORT";
+
+export const agentRuns = pgTable("agent_runs", {
+  id: uuid("id").primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  incidentId: uuid("incident_id").notNull(),
+  incidentVersion: integer("incident_version").notNull(),
+  model: text("model").notNull(),
+  status: text("status").$type<AgentRunStatus>().notNull(),
+  steps: integer("steps").notNull(),
+  inputTokens: bigint("input_tokens", { mode: "number" }).notNull(),
+  outputTokens: bigint("output_tokens", { mode: "number" }).notNull(),
+  costMicroUsd: bigint("cost_micro_usd", { mode: "bigint" }).notNull(),
+  toolCalls: jsonb("tool_calls").notNull(),
+  evidenceShown: jsonb("evidence_shown").notNull(),
+  report: jsonb("report"),
+  verification: jsonb("verification"),
+  policyRecommendation: text("policy_recommendation").$type<Recommendation>().notNull(),
+  error: text("error"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }).notNull().defaultNow(),
+});

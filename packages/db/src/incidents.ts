@@ -12,6 +12,7 @@ import {
   canonicalJson,
   classifyFinality,
   decide,
+  detectSupplierTextSignals,
   evidenceSetHash,
   sha256Hex,
   transitionIncident,
@@ -262,6 +263,46 @@ export async function flagRisk(
     const r = transitionIncident(refreshed, { type: "NEW_EVIDENCE" });
     if (r.ok) await applyTransition(tx, organizationId, refreshed, { type: "NEW_EVIDENCE" }, actor);
   });
+}
+
+/**
+ * A message from the supplier (email, chat). Stored as UNTRUSTED evidence and
+ * screened by deterministic code, which raises risk flags before any model
+ * reads the text. The model can never clear a flag.
+ */
+export async function ingestSupplierMessage(
+  db: Db,
+  organizationId: string,
+  incidentId: string,
+  msg: { from: string; subject: string; body: string; receivedAt: string; synthetic: boolean },
+  actor = "intake",
+): Promise<{ evidenceId: string; flags: RiskFlag[] }> {
+  const evidenceId = await addEvidence(
+    db,
+    organizationId,
+    incidentId,
+    {
+      kind: msg.synthetic ? "synthetic_fixture" : "unknown",
+      source: "supplier-message",
+      ref: msg.from,
+      trusted: false,
+      content: { from: msg.from, subject: msg.subject, body: msg.body, receivedAt: msg.receivedAt },
+    },
+    actor,
+  );
+  const signals = detectSupplierTextSignals(`${msg.subject}
+${msg.body}`);
+  for (const flag of signals.flags) await flagRisk(db, organizationId, incidentId, flag, evidenceId, "text-screen");
+  if (signals.flags.length) {
+    await db.transaction((tx) =>
+      appendAudit(tx, organizationId, {
+        actor: "text-screen",
+        eventType: "supplier_message.screened",
+        payload: { incidentId, evidenceId, flags: signals.flags, excerpts: signals.matches.map((m) => m.excerpt) },
+      }),
+    );
+  }
+  return { evidenceId, flags: signals.flags };
 }
 
 // ---------- transitions ----------
