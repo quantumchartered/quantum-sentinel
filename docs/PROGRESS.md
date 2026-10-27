@@ -1,51 +1,59 @@
 # Progress and handoff
 
-Updated October 27, 2026 by Claude Code. Branch: `codex/phase-0-plan`.
+Updated October 27, 2026 by Claude Code. Branch: `t1/integration` (branched from `codex/phase-0-plan`; neither is merged to `main` yet).
 
 ## Current stopping point
 
-**Tier T0 (Feasibility): documentation done; the credential-dependent steps are blocked on the founder.** No application code exists yet. The next step is the feasibility run in [PLAN.md §0.4](PLAN.md). Start it as soon as `.env` has the sandbox keys.
+**Tier T1 (Integration proof).** Everything that can be built without credentials is done and tested. **Nothing has run against the real Airwallex sandbox yet**, because the founder has not supplied API keys. The next step is the [PLAN.md §0.4](PLAN.md) feasibility run using `pnpm sandbox …` (see the README command table).
 
-## Done in this tier
+Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder at the same time as Claude Code. The founder stopped Codex and gave Claude Code sole ownership. Codex's tool pins (TS 6, Vitest 5, ESLint 10, pnpm 12) were kept, and so was its ESLint `parseFloat` rule.
 
-Codex (Phase 0, commit `5b66c86`):
-- Plan with the provider and incident state machines, data model, tools and risks ([PLAN.md](PLAN.md) §1–§12).
-- Research files [API-RESEARCH.md](API-RESEARCH.md) and [WEBHOOK-RESEARCH.md](WEBHOOK-RESEARCH.md), plus [SETUP.md](SETUP.md), [DECISIONS.md](DECISIONS.md) D01–D15, `.env.example` and `.mcp.json`.
+## Done and tested
 
-Claude Code (this commit):
-- The founder issued the **Quantum Sentinel Master Build Directive**. It is now `AGENTS.md` = `CLAUDE.md` (byte-identical). The original brief is archived at [hackathon/ORIGINAL_BRIEF.md](hackathon/ORIGINAL_BRIEF.md).
-- Wrote [hackathon/OFFICIAL_REQUIREMENTS.md](hackathon/OFFICIAL_REQUIREMENTS.md): confirmed rules with their sources, builder-guide guidance, Airwallex facts, 9 discrepancies and 5 unknowns.
-- Re-checked airwallexdev.com, `/guide` and the Docs MCP. New facts: `request_id` must be 10–50 characters (code `018`); sandbox SWIFT payouts cost a flat EUR 12.85; webhooks are configured only in the web app; the full 32-value `failure_type` enum for simulation is confirmed; the schema route is `/api/v1/beneficiary_api_schemas/generate`; response amounts are JSON numbers.
-- Added PLAN.md §0: the directive delta, the target layout and diagram, how each of the 13 policy invariants will be enforced and tested, the 10-step sandbox feasibility sequence, and the T0–T2 backlog.
-- Added DECISIONS D16–D23. Rewrote the README for Quantum Sentinel.
+| Area | Where | Tests |
+| --- | --- | --- |
+| Workspace (pnpm 12, strict TS 6 NodeNext, Vitest 5, ESLint 10) | root | `pnpm check` |
+| Money: bigint minor units, currency allowlist, exact major↔minor conversion; rejects floats, exponents and excess precision | `packages/contracts/src/money.ts` | 31 unit tests incl. fast-check |
+| Airwallex adapter: sandbox-only guard, single-flight token refresh, three retry classes, duplicate/uncertain reconciliation by `request_id`, Zod decoders, failure normalization (current + legacy) | `packages/airwallex/src/{http,client,schemas,errors}.ts` | 32 tests against a scripted fake server |
+| Simulation behind one interface (transition, deposit) with documented enums | `packages/airwallex/src/simulation.ts` | covered above |
+| Webhook signature verification (raw bytes, constant time) and envelope parsing (`data` or `data.object`) | `packages/airwallex/src/webhook.ts` | 9 tests |
+| Transfer history: append-only failure facts, forward-only status, conservative finality | `packages/policy/src/transfer-history.ts` | 14 tests incl. 3 fast-check properties |
+| Postgres event store: append-only triggers, dedup by event id, tenant scoping, request_id uniqueness | `packages/db` (`migrations/0001_t1_event_store.sql`) | 11 integration tests |
+| Fastify webhook receiver (200 only after commit, 401 on a bad signature, 256 KB limit) and backup poller | `apps/api/src/{server,poller,main}.ts` | 8 integration tests |
+| Sandbox CLI with redacted fixtures | `apps/api/src/cli/sandbox.ts` | redaction: 2 tests. **CLI not yet run against the sandbox** |
 
-## Checks
+Commands:
+- `pnpm check`: lint, typecheck, 88 unit tests, 19 integration tests (Docker required). Last run: all passing.
+- `pnpm test`: unit tests only (no Docker).
 
-- `cmp AGENTS.md CLAUDE.md` → identical.
-- `git check-ignore .env` → ignored; `.env.example` has empty secret values.
-- Relative Markdown links in `docs/`, `README.md` and `PRIOR_WORK.md` resolve (link check in the commit for this step).
-- **Application tests: none exist yet. Nothing has been run against the sandbox.**
+The "FAILED flips to CANCELLED in seconds" requirement is covered at three levels: pure fold (`transfer-history.test.ts`), persisted (`event-store.int.test.ts`), and HTTP webhook plus poller (`server.int.test.ts`). Each covers both delivery orders.
+
+## Half-done and next steps
+
+1. **Founder:** put `AIRWALLEX_CLIENT_ID` and `AIRWALLEX_API_KEY` in `.env`. Then `pnpm sandbox seed-org`, which prints a `SENTINEL_ORGANIZATION_ID` to add.
+2. Run §0.4 in order: `check` → `fund` → `beneficiary` → `transfer` → `transition SENT` → `watch` + `transition FAILED --failure-type BENEFICIARY_BANK_RETURNED` → second transfer to `PAID` → repeat-request_id check. Commit the fixtures from `fixtures/sandbox/` and add a "Verified in sandbox" table to API-RESEARCH.md.
+3. Tunnel: `cloudflared tunnel --url http://127.0.0.1:4000`. Founder then registers `<tunnel>/webhooks/airwallex` in the sandbox web app (Settings > Developer > Webhooks) and puts the secret in `AIRWALLEX_WEBHOOK_SECRET`.
+4. Then T2 (PLAN.md §0.5): obligations/payments tables with the partial unique index, incident state machine, bound approvals, outbox executor, audit chain, ledger.
+
+## Known gaps and shortcuts
+
+- **No sandbox contract evidence yet.** Decoders follow the official reference (Docs MCP). The real responses may differ. The decoders fail closed (`AirwallexContractError`), so a mismatch will show up loudly.
+- `createBeneficiary` returns the raw JSON. Its response shape gets pinned after the first fixture.
+- Beneficiary payload: the CLI checks every schema-required path before sending. `company_name` for COMPANY is included but not yet confirmed by a schema response.
+- The webhook max age defaults to 73 h because Airwallex retries for about 3 days and the docs don't say whether `x-timestamp` is renewed. Event-id dedup is the replay defence. Tighten this after observing sandbox redelivery.
+- Only one tenant is wired into the API (`SENTINEL_ORGANIZATION_ID`). Per-tenant webhook secrets wait for `provider_connections` in T2.
+- `docker compose up` runs only Postgres today.
 
 ## Blocked on the founder
 
-1. Sandbox account and API key: put `AIRWALLEX_CLIENT_ID` and `AIRWALLEX_API_KEY` in `.env` ([SETUP.md](SETUP.md)).
-2. Developer MCP login: run `/mcp` in Claude Code and authenticate `airwallex-dev`.
-3. Anthropic API key or the hackathon Claude credits (needed in T3a, not before).
-4. Tunnel choice: cloudflared (preferred, no account needed for quick tunnels) or ngrok.
-5. Answers to the unknowns in [OFFICIAL_REQUIREMENTS.md §5](hackathon/OFFICIAL_REQUIREMENTS.md).
-6. Quantum Chartered patterns to disclose or re-implement ([PRIOR_WORK.md](../PRIOR_WORK.md)).
-
-## Local tooling
-
-Node v24.20.0 and corepack 0.35.0 are installed; `pnpm` is not on PATH (enable it with `corepack enable pnpm` in T1). Docker 29.7.2 is installed. Java is missing, so TLC will run in a container in T4.
-
-## Known limitations
-
-- The real-world no-double-pay guarantee depends on finality evidence from the provider (see PLAN.md §5). Simulated evidence will be labelled as simulated.
-- The guide and the official docs disagree in places (OFFICIAL_REQUIREMENTS §4). Sandbox fixtures will settle these in T0/T1.
+1. Sandbox API keys in `.env` (see SETUP.md). Do not paste them into chat.
+2. Developer MCP login: `/mcp` → authenticate `airwallex-dev`.
+3. Anthropic API key or the hackathon Claude credits (needed from T3a).
+4. Answers to [OFFICIAL_REQUIREMENTS.md §5](hackathon/OFFICIAL_REQUIREMENTS.md).
+5. Quantum Chartered patterns to disclose ([PRIOR_WORK.md](../PRIOR_WORK.md)).
 
 ## Next agent's first steps
 
-1. Read AGENTS.md, this file, PLAN.md §0, then OFFICIAL_REQUIREMENTS.md.
-2. If `.env` has keys: run the PLAN.md §0.4 steps one at a time. Save redacted fixtures and add the "Verified in sandbox" table to API-RESEARCH.md.
-3. Then begin T1 per the PLAN.md §0.5 backlog. One commit per finished step.
+1. Read AGENTS.md, this file, PLAN.md §0, OFFICIAL_REQUIREMENTS.md and DECISIONS.md.
+2. Run `pnpm install && pnpm check`. It must be green before you change anything.
+3. If `.env` has keys, do "Half-done and next steps" 2–3. Otherwise start T2 items that need no keys.

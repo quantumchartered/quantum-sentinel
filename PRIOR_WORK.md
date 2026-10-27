@@ -21,6 +21,12 @@ Recorded October 27, 2026, during Phase 0.
 - Wrote docs/hackathon/OFFICIAL_REQUIREMENTS.md, PLAN.md §0, DECISIONS D16–D23 and the rewritten README.
 - Still no application code. No Quantum Chartered code has been read or copied. The directive (§3) lists Quantum Chartered patterns we *may* re-implement: integer money, double-entry ledger, idempotency registry, SERIALIZABLE transactions, ordered row locking, provider adapter, event queue and redaction. Any of them that we use will be listed here as a "pre-existing pattern, re-implemented during the hackathon".
 
+## Claude Code T1 (October 27, 2026), all written during the hackathon
+
+- packages/contracts (money), packages/airwallex (adapter, simulation, webhooks), packages/policy (transfer history), packages/db (schema, migrations, event store), apps/api (webhook receiver, poller, sandbox CLI) and their tests.
+- Codex wrote the initial workspace config (package.json pins, tsconfig.base.json, eslint.config.js) during the hackathon on Oct 27. Claude Code reconciled it and kept it.
+- No Quantum Chartered code was read or copied. The patterns used (integer minor units, idempotency keys, append-only evidence, advisory-locked migrations) are standard and were written fresh here. If the founder confirms they mirror specific Quantum Chartered designs, list them as "pre-existing pattern, re-implemented".
+
 ## Required follow-up
 
 Before importing prior work, record its source repository/path, author, license, original date, reused parts, and changes made during the hackathon. Add externally reused code and assets to this record. Do not represent templates, prior patterns, generated results, or unrun evaluations as new measured results.

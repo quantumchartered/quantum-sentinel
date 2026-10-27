@@ -69,3 +69,20 @@ The following are proposed application policies, not additional Airwallex guaran
 ## Phase 1 contract checklist
 
 Before money-moving sandbox tests, confirm selected API/webhook versions; obtain schemas for the chosen corridor; capture redacted failure and duplicate-response fixtures; verify `SENT -> FAILED -> CANCELLED` timing and retained fields; determine attributable refund evidence; and document simulation discrepancies. Questions about finality, arrival evidence, and late-after-`PAID` replacement policy remain for the owner in `PLAN.md`.
+
+## Docs MCP re-check by Claude Code (2026-10-27)
+
+Confirmed in the official reference and used by `packages/airwallex`. **These are still documentation facts, not sandbox observations.**
+
+| Endpoint / object | Finding used in code |
+| --- | --- |
+| `POST /api/v1/transfers/create` | `transfer_amount` and `source_amount` are **strings** in the request; `request_id`, `reason`, `reference`, `transfer_currency` required; `beneficiary_id` or inline `beneficiary` |
+| Transfer response | Amounts are **JSON numbers**; `failure.{code,message,details.type,details.reason_codes}` |
+| `GET /api/v1/transfers` | Filter `request_id`; `page`/`page_size`; `page=0` lifts the 30-day default window; response `items`, `page_after`, `page_before` |
+| `GET /api/v1/balances/current` | Bare **array** of `{account_type, currency, available_amount, pending_amount, reserved_amount, total_amount, prepayment_amount}`; `account_type=cash` filter |
+| `GET /api/v1/global_accounts` | `items[]` (pagination moved to `page_before/page_after` in 2024-08-07) |
+| `POST /api/v1/global_accounts/create` | `request_id`, `country_code`, `required_features[{currency, transfer_method}]` |
+| `POST /api/v1/simulation/deposit/create` | `amount` (number, required), `global_account_id` (required), optional `payer_name`, `payer_bankname`, `payer_country`, `reference`, `statement_ref`, `status` (default `SETTLED`); 201 |
+| `POST /api/v1/beneficiary_api_schemas/generate` | Body `bank_country_code, account_currency, transfer_method, local_clearing_system, entity_type, type`; response `fields[{key,path,required,rule}]` |
+| Error envelope | `code`, `message`, `source`, `details`, sometimes `trace_id`; transfer duplicate example `duplicate_request_id` with `details.id` |
+| Webhook payload (Payouts page) | Transfer object directly in `data` (not `data.object`); `version` is the API schema version |

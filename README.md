@@ -4,7 +4,7 @@
 
 Quantum Sentinel is an entry in the Airwallex Agentic Banking Hackathon 2026 (Kit 3: Payment Ops Incident Commander). It investigates stuck or failed supplier payments on the **Airwallex sandbox** and recommends **WAIT**, **REPLACE** or **ESCALATE**. It changes its recommendation when new evidence arrives. Deterministic code and a bound human approval stand between the AI and any money movement, so the same obligation can never be paid twice.
 
-**Status: T0 feasibility, documentation only. There is no runnable application yet.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
+**Status: T1 integration proof.** The code is built and tested against a fake Airwallex and a real local Postgres. **It has not run against the Airwallex sandbox yet, because the API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
 
 Start here:
 
@@ -15,17 +15,37 @@ Start here:
 - [docs/SETUP.md](docs/SETUP.md): sandbox account, MCP and secrets.
 - [PRIOR_WORK.md](PRIOR_WORK.md): what was built during the hackathon and what came before.
 
-## Setup today
+## Setup
 
-From the repository root in PowerShell:
+You need Node 24+, pnpm 12 (`npm i -g pnpm@12.15.0`) and Docker. From the repository root:
+
+```bash
+pnpm install && pnpm check
+```
+
+`pnpm check` runs lint, typecheck, the unit tests, and the integration tests. The integration tests start Sentinel's own Postgres with Docker Compose on `127.0.0.1:54329`. They never use port 5432.
+
+To talk to the sandbox, create a git-ignored `.env` from the template. In PowerShell:
 
 ```powershell
 if (-not (Test-Path -LiteralPath .env)) { Copy-Item -LiteralPath .env.example -Destination .env }
 ```
 
-This creates a git-ignored credentials file and never overwrites an existing one. Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screenshots and Git.
+Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screenshots and Git. Then you can run:
 
-The target launch command is `docker compose up --build`. It arrives in T1 and does not exist yet.
+| Command | What it does |
+| --- | --- |
+| `pnpm sandbox check` | Read-only: login, balances, global accounts. Saves redacted fixtures |
+| `pnpm sandbox seed-org` | Creates the demo tenant row |
+| `pnpm sandbox fund --amount 60000` | Makes sure a USD global account exists, then runs a **simulated** deposit |
+| `pnpm sandbox beneficiary` | Creates the synthetic supplier (US / USD / ACH) |
+| `pnpm sandbox transfer --beneficiary <id> --amount 25000` | Creates a transfer with a fresh `request_id` |
+| `pnpm sandbox transition --id <id> --to FAILED --failure-type BENEFICIARY_BANK_RETURNED` | **Simulated** status change |
+| `pnpm sandbox watch --id <id>` | Polls quickly and prints every status change with timing |
+| `pnpm sandbox history --id <id>` | Shows what Sentinel knows and its finality classification |
+| `pnpm api` | Webhook receiver on `:4000` plus the backup poller |
+
+A single `docker compose up` that also runs the API and the web console arrives once those apps exist.
 
 ## Architecture (planned)
 
@@ -53,7 +73,8 @@ flowchart LR
 | --- | --- |
 | Scenario A (WAIT → REPLACE → RESOLVED) on the real sandbox | Not implemented |
 | Scenarios B (races) and C (fraud / reconciliation) | Not implemented |
-| Vitest / fast-check / Playwright | Not implemented or run |
+| Vitest / fast-check | 88 unit and 19 Postgres integration tests passing (`pnpm check`) |
+| Playwright | Not implemented |
 | Attack scoreboard, EVAL.md | Not run; no results claimed |
 | TLC model check | Not run; no proof claimed |
 | Demo video (< 5 min) | Planned for T5 |

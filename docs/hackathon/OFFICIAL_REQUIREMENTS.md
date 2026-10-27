@@ -82,6 +82,7 @@ Sources:
 | X7 | — | Duplicate errors are spelled both `request_id_duplicate` and `duplicate_request_id`. Also `409 request_pending` | Normalize all of them to "reconcile the existing transfer" |
 | X8 | Every mutating call needs a stable `request_id` | `beneficiaries/create` and `simulation/deposit/create` document no `request_id` field | Never invent the field. Use a local operation ID. On uncertainty, reconcile; never retry blindly |
 | X9 | Codex snippet on [S] uses `experimental_use_rmcp_client = true` | Codex's current CLI supports HTTP MCP directly (per Codex, Phase 0) | Codex-only detail. Claude Code uses `.mcp.json` |
+| X10 | Generic webhook docs: payload in `data.object` | Payouts webhook reference: transfer directly in `data` | Parser accepts both; anything else fails closed (D31) |
 
 ## 5. Unknowns for the founder
 

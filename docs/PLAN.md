@@ -99,14 +99,15 @@ Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Ea
 - [ ] Verified-endpoint table in API-RESEARCH.md
 
 **T1 Integration proof (Oct 28–30)**
-- [ ] pnpm workspace, TS config, Vitest, ESLint, Docker Compose (Postgres) with `pnpm test` green
-- [ ] `packages/contracts`: Money (bigint minor units, currency exponent table) and major↔minor conversion, with property tests
-- [ ] `packages/airwallex`: sandbox-only base URL guard, token cache with single-flight refresh, typed Zod decoders, endpoint-specific retry policy, `request_id` generation, error normalization. Tested against a fake server
-- [ ] `packages/db`: initial migrations (organizations, obligations, payments, provider_events, failure_observations, evidence, operations)
-- [ ] Scripts: fund wallet, create beneficiary, create transfer, transition (SENT / PAID / FAILED + type). §0.4 steps 6–10 against the real sandbox
-- [ ] Webhook ingress (signature over raw body, dedup, persist before 200) and a cloudflared tunnel
-- [ ] Backup poller. Test: "FAILED flips to CANCELLED in seconds" never loses the failure
-- [ ] Evidence store with provenance labels
+- [x] pnpm workspace, TS config, Vitest, ESLint, Docker Compose (Postgres) with `pnpm test` green
+- [x] `packages/contracts`: Money (bigint minor units, currency exponent table) and major↔minor conversion, with property tests
+- [x] `packages/airwallex`: sandbox-only base URL guard, token cache with single-flight refresh, typed Zod decoders, endpoint-specific retry policy, `request_id` generation, error normalization. Tested against a fake server
+- [x] `packages/db`: initial migration (organizations, provider_events, webhook_rejections, transfer_observations, provider_operations). Obligations, payments and evidence move to T2
+- [~] Scripts: fund wallet, create beneficiary, create transfer, transition (SENT / PAID / FAILED + type). Written (`pnpm sandbox`); §0.4 steps 6–10 against the real sandbox **not yet run** (no keys)
+- [x] Webhook ingress (signature over raw body, dedup, persist before 200)
+- [ ] cloudflared tunnel + webhook subscription in the sandbox web app (needs keys)
+- [x] Backup poller. Test: "FAILED flips to CANCELLED in seconds" never loses the failure
+- [ ] Evidence store with provenance labels (raw provider evidence stored; the labelled `evidence` table is T2)
 
 **T2 Safety core (Oct 30–Nov 2)**
 - [ ] Incident state machine (pure) and persisted transitions

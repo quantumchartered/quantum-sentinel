@@ -10,7 +10,7 @@ Status recorded October 27, 2026 (Codex), updated the same day by Claude Code. T
 | Codex Developer MCP | `airwallex_dev` registered and enabled at `https://mcp.sandbox.airwallex.com/developer`; OAuth launched but timed out waiting for the user's callback; account access not verified |
 | Global Accounts verification | Not run: Developer OAuth or REST credentials required; an empty authenticated list will count as success |
 | Claude Code (desktop app) | Running since Oct 27. Project `.mcp.json` loaded. `airwallex-docs` connected and searched successfully. `airwallex-dev` **needs sandbox login**: run `/mcp` in Claude Code and authenticate `airwallex-dev` |
-| Runtime | Node v24.20.0 and npm 11.19.0 found; dependency compatibility not tested yet |
+| Runtime | Node v24.20.0; pnpm 12.15.0 installed globally (`npm i -g pnpm@12.15.0`); `pnpm check` green |
 | Docker | Compose v5.5.1 and engine 29.7.2 verified; no containers created |
 | TLC runtime | Java not found on PATH; use a pinned Java/TLC container or install an approved runtime in the formal-model phase |
 
