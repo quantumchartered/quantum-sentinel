@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# Preserve the supplied instruction files exactly, including their original line endings.
+AGENTS.md -text
+CLAUDE.md -text
