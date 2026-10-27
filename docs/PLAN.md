@@ -1,6 +1,123 @@
-# Phase 0 — Payment Ops Incident Commander
+# Quantum Sentinel — plan (Kit 3: Payment Ops Incident Commander)
 
-Prepared October 27, 2026. **Planning only; awaiting the user's review before Phase 1.**
+Prepared October 27, 2026. Codex wrote §1–§12 for the original brief. Claude Code added §0 the same day, after the founder issued the Master Build Directive (`AGENTS.md`). **§0 takes precedence where the two differ.** §1–§12 remain the detailed design.
+
+## 0. Quantum Sentinel alignment (Master Build Directive)
+
+### 0.1 What changed from the original brief
+
+- Product name **Quantum Sentinel**. Work is organized in **tiers T0–T5** (AGENTS.md §11), replacing "Phases 0–4" in §10. The mapping is: Phase 1 → T1; Phase 2 → T2 + T3a + T3b; Phase 3 → T4; Phase 4 → T5.
+- Multi-tenant from the start: `organization_id` on every table and in every repository function, with roles Owner / Approver / Operator / Viewer.
+- The agent's only write tool is **`propose_action`**, replacing §8's `propose_replacement`. It covers REPLACE as well as a proposed ESCALATE or WAIT acknowledgement.
+- Every evidence item carries one of the labels *provider fact / internal record / synthetic fixture / AI interpretation / unknown*.
+- **Decision Replay** is a must-have flagship screen, no longer an advanced extra.
+- Ledger and reconciliation (double-entry `ledger_entries`, `reconciliation_runs`) are in T2.
+- The UI style is now dark charcoal and navy, replacing the original off-white/black.
+
+### 0.2 Repository layout (target, created in T1)
+
+```text
+apps/api            Fastify v5: operator API, webhook ingress, and a second process entry `worker`
+                    (reducer, backup poller, outbox executor, agent runs). Agent tool loop lives in src/agent.
+apps/web            React + Vite + Tailwind + Radix operator console
+packages/contracts  Zod schemas shared by api/web: money (bigint minor units), states, report JSON, tool I/O
+packages/policy     Pure deterministic code: finality, duplicate, balance and approval rules, incident state
+                    machine, approval HMAC canonicalization, audit hash chain. No I/O.
+packages/airwallex  Typed sandbox adapter: auth refresh, unit conversion, request_ids, retries, decoders.
+                    `simulation/` sub-module is separate and never exposed to the agent.
+packages/db         Drizzle schema, SQL migrations (partial unique indexes, checks), transaction helpers
+scripts/            fund-wallet, create-beneficiary, create-transfer, transition, audit-verify, replay
+spec/               TLA+ model + TLC config (T4)
+```
+
+`packages/db` is the one addition to the directive's layout (decision D16). Migrations are shared by api, worker, scripts and integration tests.
+
+```mermaid
+flowchart LR
+  subgraph Airwallex sandbox
+    AW[REST API]:::ext
+    WH[Webhooks]:::ext
+  end
+  WH -->|signed| IN[Webhook ingress]
+  PO[Backup poller] --> AW
+  IN --> ES[(provider_events<br/>append-only, dedup)]
+  PO --> ES
+  ES --> RD[Reducer] --> INC[Incident state machine<br/>packages/policy]
+  INC --> EV[(evidence)]
+  INC --> AG[Claude investigator<br/>read-only tools + propose_action]
+  AG -->|proposal| POL[Policy checks<br/>packages/policy]
+  POL --> AP[Bound human approval<br/>HMAC]
+  AP --> OB[(outbox)] --> EX[Executor] -->|new request_id| AW
+  INC --> AU[(hash-chained audit)]
+  EX --> AU
+  AU --> UI[Console: Incident Workspace,<br/>Decision Replay, Approvals, Scenario Lab]
+```
+
+### 0.3 Policy invariants and how each is tested
+
+| # | Invariant (AGENTS.md §6) | Enforcement | Test |
+|---|---|---|---|
+| 1 | At most one blocking or successful payment per obligation | Partial unique index on `payments(obligation_id) WHERE blocking`, plus `SELECT … FOR UPDATE` on the obligation | Real-Postgres test with N parallel replace requests leading to exactly 1 row. fast-check command sequences (webhooks, polls, approvals, retries, crashes) checked against the real reducer |
+| 2 | Replace only after a confirmed terminal failure with a recorded type | `policy.canReplace()` requires a `FailureObservation` plus a CANCELLED observation, and the original never PAID | Table test for every provider status. Property test: no random history without a failure observation ever yields `canReplace=true` |
+| 3 | Never retry an uncertain payment as a new transfer | Outbox keeps the same `request_id`. UNKNOWN keeps the fence. Reconcile via `GET /transfers?request_id=` | Fake adapter that times out after accepting the request: exactly one provider transfer |
+| 4 | Bound, expiring approvals | HMAC over the canonical tuple. 15-minute TTL. Consumed once under lock | Mutate each bound field, then verify fails. Expiry test. Two concurrent consumers: exactly one wins |
+| 5 | Revalidate provider state before execution | Executor re-reads the transfer and beneficiary when it claims the outbox job | Status changes between approval and claim: blocked |
+| 6 | Amount, currency, beneficiary and balance (including fees) | `policy.checkFunds()` uses bigint arithmetic | Boundary tests (balance = need, need − 1). Property tests on minor-unit arithmetic |
+| 7 | Tenant isolation | `organizationId` is a required argument on every repository function. Composite foreign keys include `organization_id` | Cross-tenant read/write attempts all fail |
+| 8 | Idempotency on every write, safe under concurrency | Unique `operations.idempotency_key`. API `Idempotency-Key` header on operator POSTs | Double-click and parallel POST tests |
+| 9 | Webhooks: signature, dedup, out-of-order, no regressions | Verify before parse. Unique `(org, provider_event_id)`. Append-only failure observations | Tampered body/timestamp, replayed events, reversed order, FAILED followed within ms by a bare CANCELLED |
+| 10 | Hash-chained append-only audit with `verify` | `prev_hash`/`hash` over canonical JSON. DB trigger rejects UPDATE/DELETE | Edit, delete or reorder an entry: verify fails at the exact sequence number |
+| 11 | Reconciliation never invents settlement | Every provider transfer is matched to a payment or flagged. Ledger sums to zero | Synthetic mismatch produces a flag plus an escalation, and no state change |
+| 12 | Fail closed | Any decoder, policy or LLM error leads to HOLD/ESCALATE | Fault injection on each dependency |
+| 13 | Supplier text is untrusted; bank-detail changes always escalate | Deterministic detector plus beneficiary hash comparison, independent of the LLM | Prompt-injection corpus: the agent may say anything, but policy still blocks |
+
+### 0.4 Airwallex feasibility check (T0, first thing once keys exist)
+
+Read-only first, then the smallest possible mutations. Every response is saved, redacted, under `fixtures/sandbox/` with its date and the API version.
+
+1. `POST /api/v1/authentication/login`: record the status code (201 vs 200) and the `expires_at` format.
+2. Read the account's API version. Pin it with `x-api-version` (candidate `2026-08-21`, which uses the `failure` object shape).
+3. `GET` the global accounts list (path to be confirmed in the Docs MCP before calling) and `GET /api/v1/balances/current`. An empty list counts as success.
+4. If there is no USD account: `POST /api/v1/global_accounts/create` (`country_code: "US"`, `required_features: [{currency:"USD", transfer_method:"LOCAL"}]`).
+5. `POST /api/v1/simulation/deposit/create` for an illustrative amount. Re-read the balance to see whether it is usable immediately.
+6. `POST /api/v1/beneficiary_api_schemas/generate` for USD/US/LOCAL, then `POST /api/v1/beneficiaries/create` with synthetic details.
+7. `POST /api/v1/transfers/create` (small amount, UUID `request_id`), then transition to PROCESSING → SENT. Read it back.
+8. Transition to `FAILED` + `BENEFICIARY_BANK_RETURNED`. Poll quickly to measure **how many seconds pass before CANCELLED**, and record the exact failure fields at each step.
+9. A second transfer with a new `request_id` → SENT → PAID. Read it back.
+10. Re-send step 7's exact request with the same `request_id`: record the duplicate error envelope and its spelling.
+
+Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Each row is one endpoint, its observed status code, a fixture path and the date.
+
+### 0.5 Backlog T0–T2
+
+**T0 Feasibility (Oct 27–28)**
+- [x] Dedicated repo, git, AGENTS.md/CLAUDE.md, MCP config
+- [x] `docs/hackathon/OFFICIAL_REQUIREMENTS.md`
+- [x] PLAN.md (this file)
+- [ ] Founder: sandbox account, API key in `.env`, Developer MCP login (via `/mcp` in Claude Code)
+- [ ] Feasibility run §0.4 steps 1–5 (auth, version, global account, deposit, balance)
+- [ ] Verified-endpoint table in API-RESEARCH.md
+
+**T1 Integration proof (Oct 28–30)**
+- [ ] pnpm workspace, TS config, Vitest, ESLint, Docker Compose (Postgres) with `pnpm test` green
+- [ ] `packages/contracts`: Money (bigint minor units, currency exponent table) and major↔minor conversion, with property tests
+- [ ] `packages/airwallex`: sandbox-only base URL guard, token cache with single-flight refresh, typed Zod decoders, endpoint-specific retry policy, `request_id` generation, error normalization. Tested against a fake server
+- [ ] `packages/db`: initial migrations (organizations, obligations, payments, provider_events, failure_observations, evidence, operations)
+- [ ] Scripts: fund wallet, create beneficiary, create transfer, transition (SENT / PAID / FAILED + type). §0.4 steps 6–10 against the real sandbox
+- [ ] Webhook ingress (signature over raw body, dedup, persist before 200) and a cloudflared tunnel
+- [ ] Backup poller. Test: "FAILED flips to CANCELLED in seconds" never loses the failure
+- [ ] Evidence store with provenance labels
+
+**T2 Safety core (Oct 30–Nov 2)**
+- [ ] Incident state machine (pure) and persisted transitions
+- [ ] Policy engine invariants 1–13 (table above)
+- [ ] Bound approvals (HMAC, TTL, single consumption)
+- [ ] Outbox executor with revalidation, reconciliation of unknown outcomes and a replacement `request_id`
+- [ ] Hash-chained audit, a DB trigger and `pnpm audit:verify`
+- [ ] Double-entry ledger, reconciliation run
+- [ ] Concurrency property tests: no double payment
+
+The original first slice (§1: USD LOCAL, no FX) stays. SWIFT and its two EUR 12.85 fees are out of scope unless the founder asks.
 
 ## 1. Goal and scope
 
@@ -113,7 +230,7 @@ spec/             TLA+ model, TLC configuration, assumptions, saved results
 scripts/          sandbox preparation, simulation, replay, audit verification
 ```
 
-These directories are proposed, not scaffolded in Phase 0.
+**Superseded by §0.2.** The directive's layout is used instead: the worker lives in `apps/api`, agent code in `apps/api/src/agent`, and audit and domain rules in `packages/policy`. Nothing has been scaffolded yet.
 
 | Entity | Essential data and guarantees |
 | --- | --- |
@@ -177,6 +294,8 @@ Expected-cost policy is evaluated only over safety-eligible actions. Use integer
 
 ## 10. Phases and acceptance gates
 
+> Superseded by the tier schedule in AGENTS.md §11 and the backlog in §0.5. The acceptance evidence below still applies to the matching tiers.
+
 | Phase | Work | Evidence required before the user approves the next phase |
 | --- | --- | --- |
 | 0 — plan | Instructions, Git, MCP setup, official research, plan/questions, provenance | Document consistency and secret-ignore checks; accurate MCP status; no app tests claimed |
@@ -228,6 +347,8 @@ Actual outcomes, time-to-recommendation, and duplicates blocked are **not run** 
 | MCP access / local tooling | Docs MCP verified; Developer OAuth attempt timed out and needs user login; Claude CLI and Java not found on PATH; Docker engine and Compose verified |
 
 ## 12. Questions for the team before implementation
+
+> Current open questions are listed in [OFFICIAL_REQUIREMENTS.md §5](hackathon/OFFICIAL_REQUIREMENTS.md) and [PROGRESS.md](PROGRESS.md). The list below is Codex's original set. Q1 is resolved. Q5 is replaced by the tier plan.
 
 1. Scope choice resolved: user delegated the choice; use USD/LOCAL/no-FX and escalate failures after PAID. SWIFT remains a later extension.
 2. Is the sandbox business approved, and can you complete Developer MCP login? Then place sandbox Client ID/API key in root `.env` as described in SETUP.md; never paste them into chat.

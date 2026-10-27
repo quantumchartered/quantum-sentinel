@@ -15,6 +15,12 @@ Recorded October 27, 2026, during Phase 0.
 - Codex Airwallex Docs and Developer MCP entries registered locally. Docs endpoint verified; Developer account access remains subject to OAuth verification.
 - No application code, tests, formal model, or paid service usage implemented.
 
+## Claude Code session (October 27, 2026)
+
+- Replaced AGENTS.md/CLAUDE.md with the founder-supplied Quantum Sentinel Master Build Directive (user-authored requirements, not agent work) and archived the original brief under docs/hackathon/.
+- Wrote docs/hackathon/OFFICIAL_REQUIREMENTS.md, PLAN.md §0, DECISIONS D16–D23 and the rewritten README.
+- Still no application code. No Quantum Chartered code has been read or copied. The directive (§3) lists Quantum Chartered patterns we *may* re-implement: integer money, double-entry ledger, idempotency registry, SERIALIZABLE transactions, ordered row locking, provider adapter, event queue and redaction. Any of them that we use will be listed here as a "pre-existing pattern, re-implemented during the hackathon".
+
 ## Required follow-up
 
 Before importing prior work, record its source repository/path, author, license, original date, reused parts, and changes made during the hackathon. Add externally reused code and assets to this record. Do not represent templates, prior patterns, generated results, or unrun evaluations as new measured results.

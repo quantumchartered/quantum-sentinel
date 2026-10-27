@@ -1,53 +1,51 @@
 # Progress and handoff
 
-Updated October 27, 2026. Branch: `codex/phase-0-plan`.
+Updated October 27, 2026 by Claude Code. Branch: `codex/phase-0-plan`.
 
 ## Current stopping point
 
-**Phase 0 — plan ready for review. App implementation has not started.** Documentation checks passed; this checkpoint is committed on the Phase 0 branch. Developer MCP login remains incomplete as described below. Stop before Phase 1 until the user explicitly approves it.
+**Tier T0 (Feasibility): documentation done; the credential-dependent steps are blocked on the founder.** No application code exists yet. The next step is the feasibility run in [PLAN.md §0.4](PLAN.md). Start it as soon as `.env` has the sandbox keys.
 
-The user delegated the first-demo scope choice: use USD/LOCAL/no-FX and escalate late failures after PAID. This did not approve starting implementation.
+## Done in this tier
 
-## Completed
+Codex (Phase 0, commit `5b66c86`):
+- Plan with the provider and incident state machines, data model, tools and risks ([PLAN.md](PLAN.md) §1–§12).
+- Research files [API-RESEARCH.md](API-RESEARCH.md) and [WEBHOOK-RESEARCH.md](WEBHOOK-RESEARCH.md), plus [SETUP.md](SETUP.md), [DECISIONS.md](DECISIONS.md) D01–D15, `.env.example` and `.mcp.json`.
 
-- Inspected the initially empty repository with no commits; copied the full pasted request identically into AGENTS.md and CLAUDE.md.
-- Read the builder guide, API introduction, current transfer/version/simulation/beneficiary reference, and official webhook/auth/balance documentation. Documented conflicting fields, routes, and response examples rather than guessing.
-- Wrote PLAN.md with provider and incident state machines, transaction/outbox design, canonical obligation identity, ingress/reducer dispatch gate, bound approvals, data model, typed tools, test/formal strategy, risks, and open questions.
-- Added README, decisions, provenance, setup instructions, `.env.example`, `.gitignore`, and Claude project MCP entries. No actual secrets or `.env` created.
-- Registered both requested Codex MCP servers. Public Docs MCP initialization/tool listing/search succeeded and its namespace became available. Developer OAuth timed out; authenticated account reads remain undone.
-- Confirmed Node/npm, Docker Compose, and Docker engine availability. Claude and Java were not found on PATH.
-- Independent review caught duplicate-import, delayed-reducer, and beneficiary-drift risks; the plan now addresses them.
+Claude Code (this commit):
+- The founder issued the **Quantum Sentinel Master Build Directive**. It is now `AGENTS.md` = `CLAUDE.md` (byte-identical). The original brief is archived at [hackathon/ORIGINAL_BRIEF.md](hackathon/ORIGINAL_BRIEF.md).
+- Wrote [hackathon/OFFICIAL_REQUIREMENTS.md](hackathon/OFFICIAL_REQUIREMENTS.md): confirmed rules with their sources, builder-guide guidance, Airwallex facts, 9 discrepancies and 5 unknowns.
+- Re-checked airwallexdev.com, `/guide` and the Docs MCP. New facts: `request_id` must be 10–50 characters (code `018`); sandbox SWIFT payouts cost a flat EUR 12.85; webhooks are configured only in the web app; the full 32-value `failure_type` enum for simulation is confirmed; the schema route is `/api/v1/beneficiary_api_schemas/generate`; response amounts are JSON numbers.
+- Added PLAN.md §0: the directive delta, the target layout and diagram, how each of the 13 policy invariants will be enforced and tested, the 10-step sandbox feasibility sequence, and the T0–T2 backlog.
+- Added DECISIONS D16–D23. Rewrote the README for Quantum Sentinel.
 
-## Checks and results
+## Checks
 
-- `Get-FileHash AGENTS.md, CLAUDE.md -Algorithm SHA256`: identical; also matched the pasted source.
-- `codex mcp get airwallex_docs` / `codex mcp get airwallex_dev`: configured at the requested sandbox URLs.
-- Docs MCP protocol initialize, `tools/list`, and documentation search: succeeded; no account data used.
-- `node --version`, `npm --version`, `docker compose version`, `docker info --format '{{.ServerVersion}}'`: succeeded. Docker required execution outside the restricted shell sandbox; no daemon change was made.
-- Documentation validation: all 15 local Markdown links across 10 files resolve; instruction copies match the supplied source; secret placeholders are empty; `.env`, `.env.local`, and `.env.production` are ignored; `.env.example` is trackable; MCP URLs match; no application code is present. Ran a fail-fast PowerShell assertion batch covering these conditions (exit 0).
-- Authored-file whitespace check: `git diff --cached --check -- . ':(exclude)AGENTS.md' ':(exclude)CLAUDE.md'`. The copied user instructions intentionally preserve three source lines with trailing spaces; their byte equality is checked separately. `.gitattributes` preserves their original bytes through Git checkout. All authored-file whitespace issues found in the first pass were corrected before commit.
-- **Application tests: not run; no application/test runner exists. No safety score, model-check result, or end-to-end success is claimed.**
+- `cmp AGENTS.md CLAUDE.md` → identical.
+- `git check-ignore .env` → ignored; `.env.example` has empty secret values.
+- Relative Markdown links in `docs/`, `README.md` and `PRIOR_WORK.md` resolve (link check in the commit for this step).
+- **Application tests: none exist yet. Nothing has been run against the sandbox.**
 
-## Half-done / external requirements
+## Blocked on the founder
 
-- Developer MCP is configured, not authenticated. Restart `codex mcp login airwallex_dev`, complete sandbox sign-in, then verify list Global Accounts. No OAuth process remains running after the recorded timeout.
-- Claude configuration is prepared but cannot be exercised without Claude Code.
-- API pin `2026-08-21` is a documented candidate; account and webhook schemas still need sandbox contract checks.
-- Finality/refund/arrival evidence contract and prior Quantum Chartered work need the user's input. See PLAN.md section 12.
+1. Sandbox account and API key: put `AIRWALLEX_CLIENT_ID` and `AIRWALLEX_API_KEY` in `.env` ([SETUP.md](SETUP.md)).
+2. Developer MCP login: run `/mcp` in Claude Code and authenticate `airwallex-dev`.
+3. Anthropic API key or the hackathon Claude credits (needed in T3a, not before).
+4. Tunnel choice: cloudflared (preferred, no account needed for quick tunnels) or ngrok.
+5. Answers to the unknowns in [OFFICIAL_REQUIREMENTS.md §5](hackathon/OFFICIAL_REQUIREMENTS.md).
+6. Quantum Chartered patterns to disclose or re-implement ([PRIOR_WORK.md](../PRIOR_WORK.md)).
 
-## Known limitations and TODOs
+## Local tooling
 
-- No source code, migrations, Compose file, UI, LLM calls, test suite, formal model, GIF, video script, or EVAL.md yet. README deliberately does not advertise a working launch command.
-- Current official docs and guide differ on beneficiary schema route, failure object, duplicate error spelling, login success status, and deposit behavior. Do not copy old payloads without validation.
-- Not all mutating endpoints document provider idempotency keys; the plan specifies local operation tracking and no blind retries for uncertain unkeyed mutations.
-- The absolute real-world duplicate-payment guarantee depends on external finality and no out-of-band transfers. Synthetic evidence must be visibly labeled; human approval cannot override unknown finality.
-- Prior-work disclosure remains pending owner references; no pre-existing code was imported.
+Node v24.20.0 and corepack 0.35.0 are installed; `pnpm` is not on PATH (enable it with `corepack enable pnpm` in T1). Docker 29.7.2 is installed. Java is missing, so TLC will run in a container in T4.
+
+## Known limitations
+
+- The real-world no-double-pay guarantee depends on finality evidence from the provider (see PLAN.md §5). Simulated evidence will be labelled as simulated.
+- The guide and the official docs disagree in places (OFFICIAL_REQUIREMENTS §4). Sandbox fixtures will settle these in T0/T1.
 
 ## Next agent's first steps
 
-1. Read AGENTS.md/CLAUDE.md, this file, PLAN.md, DECISIONS.md, API-RESEARCH.md, and WEBHOOK-RESEARCH.md.
-2. Check whether the user has approved Phase 1 in the conversation. If not, present the plan/questions and wait; do not infer approval from scope delegation.
-3. Finish sandbox authentication and credential setup as documented, then verify read-only contracts and resolve documented uncertainties before dependent code or mutations.
-4. Implement Phase 1 in small tested steps, updating this file and accurate README commands after each completed step. Use a `wip/<task>` branch only if forced to stop with unfinished implementation; Phase 0 is a documentation checkpoint, not broken application code.
-
-See [DECISIONS.md](DECISIONS.md) for rationale and [PRIOR_WORK.md](../PRIOR_WORK.md) for attribution.
+1. Read AGENTS.md, this file, PLAN.md §0, then OFFICIAL_REQUIREMENTS.md.
+2. If `.env` has keys: run the PLAN.md §0.4 steps one at a time. Save redacted fixtures and add the "Verified in sandbox" table to API-RESEARCH.md.
+3. Then begin T1 per the PLAN.md §0.5 backlog. One commit per finished step.
