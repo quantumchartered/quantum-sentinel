@@ -1,10 +1,10 @@
 # Progress and handoff
 
-Updated October 27, 2026 by Claude Code. Branch: `t2/safety-core`, stacked on `t1/integration`, which is stacked on `codex/phase-0-plan`. Nothing is merged to `main` yet.
+Updated October 27, 2026 by Claude Code. Branch: `t3a/investigator`, stacked on `t2/safety-core`, then `t1/integration`, then `codex/phase-0-plan`. Nothing is merged to `main` yet.
 
 ## Current stopping point
 
-**T2 (safety core) is built and tested against MOCK provider data and a real local Postgres.** T1 is also complete, but **nothing has run against the real Airwallex sandbox yet**: the founder has not created the sandbox account and API key. Claude Code cannot do that step (creating accounts and handling API keys are off-limits for the agent). The founder steps are below.
+**T3a (the Claude investigator) is built and tested with a scripted MOCK model, on top of T2 (safety core) and T1.** Everything is tested against MOCK provider data and a real local Postgres. **Nothing has run against the real Airwallex sandbox or the live Claude API yet.** No Anthropic key has been supplied, and for the sandbox the founder has not created the sandbox account and API key. Claude Code cannot do that step (creating accounts and handling API keys are off-limits for the agent). The founder steps are below.
 
 Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder at the same time as Claude Code. The founder stopped Codex and gave Claude Code sole ownership. Codex's tool pins (TS 6, Vitest 5, ESLint 10, pnpm 12) and its ESLint `parseFloat` rule were kept.
 
@@ -27,7 +27,11 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **Executor**: lease claim, reconcile uncertain attempts by request_id, full revalidation, no transaction across HTTP | `packages/db/src/execution.ts` | 10 racing workers → 1 provider call (mutation-checked) |
 | **Ledger** (double entry; unbalanced journal rejected at commit; idempotent postings) and **reconciliation** | migration 0003, `packages/db/src/ledger.ts` | Scenario A books balance; SYNTHETIC mismatch flagged |
 | Fastify webhook receiver and backup poller | `apps/api/src/{server,poller,main}.ts` | 8 integration tests |
-| CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
+| **Supplier-text screening** in code (bank-detail change, prompt injection) and untrusted-evidence intake | `packages/policy/src/text-signals.ts`, `ingestSupplierMessage` | 16 unit tests |
+| **Claude investigator**: bounded manual tool loop, read-only strict tools, `propose_action` (proposal only), strict `submit_report` | `apps/api/src/agent/{loop,tools,model,prompt,report}.ts` | 11 integration tests with a MOCK model |
+| **Grounding verifier** (citations, labels, checkable facts, stale status, policy agreement, contradictions) and **revision diff** | `apps/api/src/agent/{verifier,diff}.ts` | 11 unit tests; override guard mutation-checked |
+| `agent_runs` metering (tokens, cost in micro-USD, tool calls, evidence shown, verification) | migration 0004 | covered by agent tests |
+| CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
 
 Covered scenarios (MOCK provider, real Postgres):
 - **A:** SENT → WAIT, and "Resend anyway" is blocked and audited. Then FAILED (bank return) followed by a bare CANCELLED → REPLACE → proposal → bound approval → executor → replacement PAID → RESOLVED with the original's fate recorded → books balance.
@@ -36,7 +40,7 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck, 120 unit tests, 38 Postgres integration tests (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck, 147 unit tests, 49 Postgres integration tests (Docker required). Last run: all passing.
 - `pnpm test`: unit tests only.
 
 ## Founder steps (only you can do these)
@@ -50,7 +54,8 @@ Commands:
 ## Next steps for the agent
 
 1. With keys: run the sandbox feasibility sequence. Wire `airwallexExecutionProvider` into a sandbox Scenario A run.
-2. Without keys: T3a, the agent. Claude tool loop with read-only tools plus `propose_action` and a grounding verifier. It needs an Anthropic API key, so build it against recorded or fake model responses first. Then the HTTP API for the console (incidents, evidence, decisions, approvals, audit), then T3b, the web console.
+2. With an Anthropic key (ANTHROPIC_API_KEY in `.env`, or `ant auth login`): `pnpm investigate <incidentId>` on a local incident. Tune the prompt only if the verifier rejects real reports.
+3. Without keys: the HTTP API for the console (incidents, evidence, decisions, agent runs and diffs, proposals, approvals, audit), then T3b, the web console (Incident Workspace, Decision Replay, Approval Center, Scenario Lab).
 
 ## Known gaps and shortcuts
 
@@ -61,11 +66,14 @@ Commands:
 - Only one tenant is wired into the API. Users, roles and per-tenant secrets come with the console API.
 - The audit chain detects edits, deletions and reordering. On its own it does not detect truncation of the newest entries, or a privileged rewrite of the whole chain. Exported checkpoints are planned (T5 security notes).
 - `docker compose up` runs only Postgres today.
+- The investigator has only been exercised with a scripted MOCK model. Real-model behaviour (citation discipline, verifier pass rate, cost per run) is unmeasured.
+- Supplier-text screening is pattern-based. It is broad on purpose, but it can be evaded by paraphrase, so the beneficiary-hash check at execution remains the hard stop.
+- No prompt caching yet. The system prompt and tools are stable, so adding `cache_control` is a cheap later win.
 
 ## Blocked on the founder
 
 1. Sandbox account and API key (steps above).
-2. Anthropic API key or hackathon Claude credits (for T3a live runs).
+2. Anthropic API key or hackathon Claude credits. T3a code is done; live runs need this.
 3. Answers to [OFFICIAL_REQUIREMENTS.md §5](hackathon/OFFICIAL_REQUIREMENTS.md).
 4. Quantum Chartered patterns to disclose ([PRIOR_WORK.md](../PRIOR_WORK.md)).
 

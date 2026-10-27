@@ -118,6 +118,13 @@ Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Ea
 - [x] Double-entry ledger, reconciliation run
 - [x] Concurrency property tests: no double payment
 
+**T3a Agent (Nov 2–5), started early on Oct 27**
+- [x] Claude tool loop (manual, bounded), read-only tools + `propose_action`, strict `submit_report`
+- [x] Grounding verifier, contradiction detection, revision diff, `agent_runs` metering
+- [x] Deterministic supplier-text screening (bank-detail change, prompt injection)
+- [ ] Live run against the Claude API (needs key) and the sandbox (needs keys): Scenario A end to end for real
+- [ ] HTTP API for the console (incidents, evidence, decisions, agent runs, approvals, audit) - start of T3b
+
 The original first slice (§1: USD LOCAL, no FX) stays. SWIFT and its two EUR 12.85 fees are out of scope unless the founder asks.
 
 ## 1. Goal and scope

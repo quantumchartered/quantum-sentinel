@@ -31,6 +31,10 @@ Recorded October 27, 2026, during Phase 0.
 
 - packages/policy decision rules, incident machine, approvals, audit chain, canonical JSON; packages/db migrations 0002–0003, incidents, execution, ledger, reconciliation, audit persistence, provider adapter; apps/api ops CLI; and their tests. No Quantum Chartered code was read or copied.
 
+## Claude Code T3a (October 27, 2026), all written during the hackathon
+
+- policy text-signals; db supplier-message intake and migration 0004; apps/api/src/agent (loop, tools, verifier, report schema, prompt, diff, model client, MOCK model for tests) and the investigate CLI. Uses the official `@anthropic-ai/sdk` (MIT) as a dependency.
+
 ## Required follow-up
 
 Before importing prior work, record its source repository/path, author, license, original date, reused parts, and changes made during the hackathon. Add externally reused code and assets to this record. Do not represent templates, prior patterns, generated results, or unrun evaluations as new measured results.
