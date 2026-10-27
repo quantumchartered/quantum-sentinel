@@ -285,6 +285,19 @@ export class AirwallexClient {
   }
 
   /**
+   * Read a beneficiary (`GET /api/v1/beneficiaries/{id}`, listed in the official
+   * changelog). Returned raw until a sandbox fixture pins its shape.
+   */
+  async getBeneficiary(id: string): Promise<unknown> {
+    const { json } = await this.http.requestRaw({
+      method: "GET",
+      path: `/api/v1/beneficiaries/${encodeURIComponent(id)}`,
+      retry: "read",
+    });
+    return json;
+  }
+
+  /**
    * Create a beneficiary. No documented dedup key, so it is never retried
    * automatically; an ambiguous failure throws AirwallexUncertainOutcomeError.
    * The response is returned raw until a sandbox fixture pins its shape.

@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  smallint,
   text,
   timestamp,
   uuid,
@@ -208,4 +209,28 @@ export const auditEvents = pgTable("audit_events", {
   actor: text("actor").notNull(),
   eventType: text("event_type").notNull(),
   payload: jsonb("payload").notNull(),
+});
+
+// ---- T2 ledger (migrations/0003_t2_ledger.sql) ----
+
+export const ledgerEntries = pgTable("ledger_entries", {
+  id: bigserial("id", { mode: "bigint" }).primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  journalKey: text("journal_key").notNull(),
+  lineNo: smallint("line_no").notNull(),
+  account: text("account").$type<"WALLET" | "IN_TRANSIT" | "SUPPLIER_PAYABLE" | "EXPENSE">().notNull(),
+  currency: text("currency").notNull(),
+  amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
+  obligationId: uuid("obligation_id"),
+  paymentId: uuid("payment_id"),
+  memo: text("memo").notNull(),
+  postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const reconciliationRuns = pgTable("reconciliation_runs", {
+  id: uuid("id").primaryKey(),
+  organizationId: uuid("organization_id").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  ok: boolean("ok").notNull(),
+  findings: jsonb("findings").notNull(),
 });

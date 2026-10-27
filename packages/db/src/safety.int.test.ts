@@ -29,7 +29,8 @@ import {
   proposeReplacement,
   registerOriginalPayment,
 } from "./incidents.js";
-import { executions, organizations, payments } from "./schema.js";
+import { accountBalances, journals, postJournal, runReconciliation, syncLedgerForObligation } from "./ledger.js";
+import { executions, ledgerEntries, organizations, payments } from "./schema.js";
 import { createTestDb } from "./testing.js";
 
 let db: Db;
@@ -406,3 +407,68 @@ describe("property: no double payment under random concurrent interleavings", ()
   });
 });
 
+
+describe("ledger and reconciliation", () => {
+  it("after Scenario A the books balance: payable settled once, wallet down by exactly one payment", async () => {
+    const p = new FakeProvider();
+    const { proposalId, obligationId, incidentId } = await readyToApprove(p);
+    const a = await approveProposal(db, org, { proposedActionId: proposalId, approverId: "approver-1", keys: KEYS });
+    if (!a.ok) throw new Error("approve failed");
+    const exec = await executeReplacement(db, p, org, a.executionId, { keys: KEYS });
+    const repId = (exec as { providerTransferId: string }).providerTransferId;
+    p.set(repId, { status: "PAID" });
+    await recordTransferSnapshot(db, org, p.snap(repId), "poll");
+    await tryResolveIncident(db, org, incidentId);
+
+    await syncLedgerForObligation(db, org, obligationId);
+    const before = await db.select().from(ledgerEntries).where(eq(ledgerEntries.obligationId, obligationId));
+    await syncLedgerForObligation(db, org, obligationId); // idempotent
+    expect(await db.select().from(ledgerEntries).where(eq(ledgerEntries.obligationId, obligationId))).toHaveLength(before.length);
+
+    expect(await accountBalances(db, org, obligationId)).toEqual({
+      "EXPENSE:USD": 2_500_000n,
+      "SUPPLIER_PAYABLE:USD": 0n,
+      "IN_TRANSIT:USD": 0n,
+      "WALLET:USD": -2_500_000n,
+    });
+  });
+
+  it("the database rejects an unbalanced journal at commit", async () => {
+    await expect(
+      db.transaction(async (tx) => {
+        await tx.insert(ledgerEntries).values({ organizationId: org, journalKey: "bad:1", lineNo: 1, account: "WALLET", currency: "USD", amountMinor: 100n, memo: "x" });
+      }),
+    ).rejects.toMatchObject({ message: expect.stringMatching(/commit/), cause: { message: expect.stringMatching(/journal bad:1 is unbalanced/) } });
+    await expect(db.update(ledgerEntries).set({ memo: "edited" })).rejects.toMatchObject({ cause: { message: expect.stringMatching(/append-only/) } });
+  });
+
+  it("a clean tenant reconciles OK", async () => {
+    const r = await runReconciliation(db, org);
+    expect(r.findings.filter((f) => f.severity === "error")).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("SYNTHETIC mismatch: an unknown provider transfer and an over-paid obligation are flagged, nothing is repaired", async () => {
+    // Labelled synthetic: the sandbox cannot produce these through the guarded paths.
+    const ghost = normalizeTransfer(TransferSchema.parse({ id: "tr-ghost", request_id: "req-ghost-000000", status: "PAID", transfer_amount: 25000, transfer_currency: "USD" }));
+    await recordTransferSnapshot(db, orgB, ghost, "poll");
+    const obligationId = await createObligation(db, orgB, {
+      supplierRef: "synthetic",
+      invoiceRef: "SYN-1",
+      amount: AMOUNT,
+      beneficiaryId: "ben-1",
+      beneficiaryHash: BEN_HASH,
+      dueAt: new Date("2026-10-25T00:00:00Z"),
+    });
+    await db.transaction(async (tx) => {
+      const fake = { obligationId, amountMinor: AMOUNT.amountMinor, currency: "USD" };
+      await postJournal(tx, orgB, journals.accrue({ id: obligationId, amountMinor: AMOUNT.amountMinor, currency: "USD" }));
+      await postJournal(tx, orgB, journals.paid({ ...fake, id: "11111111-1111-4111-8111-111111111111" }));
+      await postJournal(tx, orgB, journals.paid({ ...fake, id: "22222222-2222-4222-8222-222222222222" }));
+    });
+    const r = await runReconciliation(db, orgB);
+    expect(r.ok).toBe(false);
+    expect(r.findings.map((f) => f.code).sort()).toEqual(["OBLIGATION_OVERPAID", "UNMATCHED_PROVIDER_TRANSFER"]);
+    expect(await paymentsForObligation(db, orgB, obligationId)).toHaveLength(0);
+  });
+});
