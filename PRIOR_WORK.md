@@ -27,6 +27,10 @@ Recorded October 27, 2026, during Phase 0.
 - Codex wrote the initial workspace config (package.json pins, tsconfig.base.json, eslint.config.js) during the hackathon on Oct 27. Claude Code reconciled it and kept it.
 - No Quantum Chartered code was read or copied. The patterns used (integer minor units, idempotency keys, append-only evidence, advisory-locked migrations) are standard and were written fresh here. If the founder confirms they mirror specific Quantum Chartered designs, list them as "pre-existing pattern, re-implemented".
 
+## Claude Code T2 (October 27, 2026), all written during the hackathon
+
+- packages/policy decision rules, incident machine, approvals, audit chain, canonical JSON; packages/db migrations 0002–0003, incidents, execution, ledger, reconciliation, audit persistence, provider adapter; apps/api ops CLI; and their tests. No Quantum Chartered code was read or copied.
+
 ## Required follow-up
 
 Before importing prior work, record its source repository/path, author, license, original date, reused parts, and changes made during the hackathon. Add externally reused code and assets to this record. Do not represent templates, prior patterns, generated results, or unrun evaluations as new measured results.

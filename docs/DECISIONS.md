@@ -41,3 +41,11 @@ October 27, 2026. Design proposals awaiting the user's Phase 0 review; no implem
 | D30 | Finality is conservative: CONFIRMED_FAILED needs captured failure facts + FAILED/CANCELLED and no PAID ever seen | Bare CANCELLED and failure-after-PAID escalate rather than permit replacement. |
 | D31 | Webhook: accept transfer under `data` or `data.object`; 73 h max age; 401 on bad signature; 200 only after commit | Docs disagree on the envelope; retry window ~3 days with unknown timestamp renewal; event-id dedup is the replay defence. |
 | D32 | Deposit `amount` sent as an exact JSON number via `JSON.rawJSON` | The reference types it as a number; this avoids float formatting entirely. |
+| D33 | `payments.blocking` is a generated column; one partial unique index enforces one blocking payment per obligation | The fence lives in the database, so no code path (including a bug or a direct SQL insert) can create a second live payment. Only FAILED_CONFIRMED (with failure type) and NOT_SENT release it. |
+| D34 | Lock order is always obligation, then incident | Prevents deadlocks between approval, evaluation and execution transactions. |
+| D35 | Replacement payments are created only by `approveProposal`; the executor is the only caller of `createTransfer` | One narrow path for money movement; "Resend anyway" only audits and routes to approval. |
+| D36 | Executor re-validates provider status, beneficiary hash, balance, approval binding and policy before sending; never holds a DB transaction across HTTP | Directive invariant 5; uncertain outcomes keep the fence and are reconciled by request_id first on retry. |
+| D37 | Approval binding uses the incident version at proposal time; executor checks against version-1 while EXECUTING | APPROVE itself bumps the version; any other change in between invalidates the approval. |
+| D38 | Evaluation only transitions when material inputs change | Periodic re-evaluation must not churn (and kill) pending approvals. |
+| D39 | Failure with no recorded `failure_type` escalates | Invariant 2: a bare "simulation" reason is not proof of what happened. |
+| D40 | Ledger posts only provider-proven facts; unbalanced journals rejected by a deferred constraint trigger; reconciliation reports but never repairs | Invariant 11: never invent settlement. |

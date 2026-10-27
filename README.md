@@ -4,7 +4,7 @@
 
 Quantum Sentinel is an entry in the Airwallex Agentic Banking Hackathon 2026 (Kit 3: Payment Ops Incident Commander). It investigates stuck or failed supplier payments on the **Airwallex sandbox** and recommends **WAIT**, **REPLACE** or **ESCALATE**. It changes its recommendation when new evidence arrives. Deterministic code and a bound human approval stand between the AI and any money movement, so the same obligation can never be paid twice.
 
-**Status: T1 integration proof.** The code is built and tested against a fake Airwallex and a real local Postgres. **It has not run against the Airwallex sandbox yet, because the API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
+**Status: T2 safety core.** The duplicate-payment fence, incident state machine, bound approvals, executor, audit chain and ledger are built and tested against a fake Airwallex and a real local Postgres. **It has not run against the Airwallex sandbox yet, because the API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
 
 Start here:
 
@@ -44,6 +44,8 @@ Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screen
 | `pnpm sandbox watch --id <id>` | Polls quickly and prints every status change with timing |
 | `pnpm sandbox history --id <id>` | Shows what Sentinel knows and its finality classification |
 | `pnpm api` | Webhook receiver on `:4000` plus the backup poller |
+| `pnpm audit:verify` | Recomputes the audit hash chain; exits 1 if anything was altered |
+| `pnpm reconcile` | Checks ledger and provider-transfer invariants; reports, never repairs |
 
 A single `docker compose up` that also runs the API and the web console arrives once those apps exist.
 
@@ -71,9 +73,9 @@ flowchart LR
 
 | Deliverable | Current result |
 | --- | --- |
-| Scenario A (WAIT → REPLACE → RESOLVED) on the real sandbox | Not implemented |
-| Scenarios B (races) and C (fraud / reconciliation) | Not implemented |
-| Vitest / fast-check | 88 unit and 19 Postgres integration tests passing (`pnpm check`) |
+| Scenario A (WAIT → REPLACE → RESOLVED) | Passing against a MOCK provider and real Postgres; not yet run on the sandbox |
+| Scenarios B (races) and C (fraud / reconciliation) | Safety layer passing (MOCK provider); agent and UI not built |
+| Vitest / fast-check | 120 unit and 38 Postgres integration tests passing (`pnpm check`) |
 | Playwright | Not implemented |
 | Attack scoreboard, EVAL.md | Not run; no results claimed |
 | TLC model check | Not run; no proof claimed |

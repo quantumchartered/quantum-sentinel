@@ -107,16 +107,16 @@ Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Ea
 - [x] Webhook ingress (signature over raw body, dedup, persist before 200)
 - [ ] cloudflared tunnel + webhook subscription in the sandbox web app (needs keys)
 - [x] Backup poller. Test: "FAILED flips to CANCELLED in seconds" never loses the failure
-- [ ] Evidence store with provenance labels (raw provider evidence stored; the labelled `evidence` table is T2)
+- [x] Evidence store with provenance labels (raw provider events in T1; labelled `evidence` table in T2)
 
 **T2 Safety core (Oct 30–Nov 2)**
-- [ ] Incident state machine (pure) and persisted transitions
-- [ ] Policy engine invariants 1–13 (table above)
-- [ ] Bound approvals (HMAC, TTL, single consumption)
-- [ ] Outbox executor with revalidation, reconciliation of unknown outcomes and a replacement `request_id`
-- [ ] Hash-chained audit, a DB trigger and `pnpm audit:verify`
-- [ ] Double-entry ledger, reconciliation run
-- [ ] Concurrency property tests: no double payment
+- [x] Incident state machine (pure) and persisted transitions
+- [x] Policy engine invariants 1–13 (table above); 7 tenant isolation is tested at the service layer, a full cross-tenant attack suite comes with the HTTP API
+- [x] Bound approvals (HMAC, TTL, single consumption)
+- [x] Outbox executor with revalidation, reconciliation of unknown outcomes and a replacement `request_id`
+- [x] Hash-chained audit, a DB trigger and `pnpm audit:verify`
+- [x] Double-entry ledger, reconciliation run
+- [x] Concurrency property tests: no double payment
 
 The original first slice (§1: USD LOCAL, no FX) stays. SWIFT and its two EUR 12.85 fees are out of scope unless the founder asks.
 
