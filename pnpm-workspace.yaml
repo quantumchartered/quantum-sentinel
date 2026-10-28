@@ -1,3 +1,8 @@
 packages:
-  - apps/*
-  - packages/*
+  - "apps/*"
+  - "packages/*"
+
+# Dependency build scripts are blocked by default (pnpm supply-chain policy).
+# esbuild's postinstall only selects its prebuilt platform binary.
+allowBuilds:
+  esbuild: true

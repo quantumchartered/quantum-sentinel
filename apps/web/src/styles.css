@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Institutional, calm, dark: charcoal and navy, off-white text, one restrained blue. */
+@theme {
+  --color-bg: #0d1016;
+  --color-panel: #131923;
+  --color-panel-2: #18202c;
+  --color-line: #253041;
+  --color-line-strong: #34425a;
+  --color-ink: #e9e6df;
+  --color-ink-dim: #a3acba;
+  --color-ink-faint: #6f7a8c;
+  --color-accent: #6b97ec;
+  --color-accent-strong: #89adf2;
+  --color-ok: #5fae8f;
+  --color-warn: #d6a54a;
+  --color-danger: #db7777;
+  --color-mock: #b79be6;
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1, "cv11" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,4 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts", "scripts/**/*.ts", "vitest.config.ts", "vitest.integration.config.ts"]
+  "include": ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts", "scripts/**/*.ts", "vitest.config.ts", "vitest.integration.config.ts"],
+  // The web console has its own browser-targeted config (apps/web/tsconfig.json).
+  "exclude": ["apps/web"]
 }

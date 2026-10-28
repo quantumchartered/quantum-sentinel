@@ -9,7 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json",
     "lint": "eslint .",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration",
     "db:up": "docker compose up -d --wait postgres",
@@ -20,7 +20,9 @@
     "audit:verify": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts audit:verify",
     "reconcile": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/ops.ts reconcile",
     "investigate": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/investigate.ts",
-    "seed:demo": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/seed.ts"
+    "seed:demo": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/seed.ts",
+    "web": "pnpm --filter @sentinel/web dev",
+    "build:web": "pnpm --filter @sentinel/web build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -40,6 +40,12 @@ function plain(reason: string): string {
   return reason;
 }
 
+/** 2500000 -> "25,000.00" (2-decimal currencies; display only). */
+function formatMinor(minor: string): string {
+  const d = minor.padStart(3, "0");
+  return `${d.slice(0, -2).replace(/B(?=(d{3})+(?!d))/g, ",")}.${d.slice(-2)}`;
+}
+
 export function buildMockReport(params: CreateParams): IncidentReport {
   const last = (name: string): J => toolResults(params).filter((r) => r.name === name && !r.isError).at(-1)?.json as J;
   const ov = last("get_incident_overview");
@@ -56,7 +62,7 @@ export function buildMockReport(params: CreateParams): IncidentReport {
   const findings: IncidentReport["findings"] = [];
   if (latest) findings.push({ statement: `The original transfer's latest status at the provider is ${latest.status}.`, label: "provider_fact", evidence_ids: [latest.evidence_id], fact: { kind: "transfer_status", value: latest.status } });
   if (failed) findings.push({ statement: `A failure was captured: ${failed.failure.type}.`, label: "provider_fact", evidence_ids: [failed.evidence_id], fact: { kind: "failure_type", value: failed.failure.type } });
-  findings.push({ statement: `The invoice amount owed is ${ov.obligation.amount_minor} minor units of ${ov.obligation.currency}.`, label: "internal_record", evidence_ids: [ov.obligation.evidence_id], fact: { kind: "amount_minor", value: ov.obligation.amount_minor } });
+  findings.push({ statement: `The invoice amount owed is ${ov.obligation.currency} ${formatMinor(ov.obligation.amount_minor)}.`, label: "internal_record", evidence_ids: [ov.obligation.evidence_id], fact: { kind: "amount_minor", value: ov.obligation.amount_minor } });
   for (const e of untrusted) findings.push({ statement: "The supplier sent a message about this payment (untrusted).", label: "unknown", evidence_ids: [e.evidence_id], fact: { kind: "none", value: "" } });
 
   const reasons = (policy.reasons as string[]).map(plain);
