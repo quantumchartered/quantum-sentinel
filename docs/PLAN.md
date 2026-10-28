@@ -123,7 +123,15 @@ Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Ea
 - [x] Grounding verifier, contradiction detection, revision diff, `agent_runs` metering
 - [x] Deterministic supplier-text screening (bank-detail change, prompt injection)
 - [ ] Live run against the Claude API (needs key) and the sandbox (needs keys): Scenario A end to end for real
-- [ ] HTTP API for the console (incidents, evidence, decisions, agent runs, approvals, audit) - start of T3b
+- [x] HTTP API for the console (incidents, evidence, decisions, agent runs, approvals, audit)
+
+**T3b Frontend (Nov 5–8), started early on Oct 27**
+- [x] Roles and four-eyes; Scenario Lab MOCK mode; Mock AI fallback
+- [x] Console: Overview, Incident Workspace, Decision Replay, Approval Center, Scenario Lab, Audit log
+- [x] Scenarios A, B, C run end to end in MOCK mode (API tests + browser check)
+- [ ] Scenario Lab SANDBOX mode (needs keys)
+- [ ] Automated Playwright suite (loading / empty / error / narrow screenshots)
+- [ ] One-command `docker compose up` for API + console
 
 The original first slice (§1: USD LOCAL, no FX) stays. SWIFT and its two EUR 12.85 fees are out of scope unless the founder asks.
 

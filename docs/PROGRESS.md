@@ -1,10 +1,10 @@
 # Progress and handoff
 
-Updated October 27, 2026 by Claude Code. Branch: `t3a/investigator`, stacked on `t2/safety-core`, then `t1/integration`, then `codex/phase-0-plan`. Nothing is merged to `main` yet.
+Updated October 27, 2026 by Claude Code. Branch: `t3b/console`, stacked on `t3a/investigator`, `t2/safety-core`, `t1/integration` and `codex/phase-0-plan`. Nothing is merged to `main` yet.
 
 ## Current stopping point
 
-**T3a (the Claude investigator) is built and tested with a scripted MOCK model, on top of T2 (safety core) and T1.** Everything is tested against MOCK provider data and a real local Postgres. **Nothing has run against the real Airwallex sandbox or the live Claude API yet.** No Anthropic key has been supplied, and for the sandbox the founder has not created the sandbox account and API key. Claude Code cannot do that step (creating accounts and handling API keys are off-limits for the agent). The founder steps are below.
+**T3b (HTTP API and operator console) is built, on top of T3a (investigator), T2 (safety core) and T1.** Scenarios A, B and C run end to end in the console in MOCK mode: a simulated provider and the labelled Mock AI. This was verified in a real browser. Everything is tested against MOCK provider data and a real local Postgres. **Nothing has run against the real Airwallex sandbox or the live Claude API yet.** No Anthropic key has been supplied, and for the sandbox the founder has not created the sandbox account and API key. Claude Code cannot do that step (creating accounts and handling API keys are off-limits for the agent). The founder steps are below.
 
 Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder at the same time as Claude Code. The founder stopped Codex and gave Claude Code sole ownership. Codex's tool pins (TS 6, Vitest 5, ESLint 10, pnpm 12) and its ESLint `parseFloat` rule were kept.
 
@@ -31,7 +31,11 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **Claude investigator**: bounded manual tool loop, read-only strict tools, `propose_action` (proposal only), strict `submit_report` | `apps/api/src/agent/{loop,tools,model,prompt,report}.ts` | 11 integration tests with a MOCK model |
 | **Grounding verifier** (citations, labels, checkable facts, stale status, policy agreement, contradictions) and **revision diff** | `apps/api/src/agent/{verifier,diff}.ts` | 11 unit tests; override guard mutation-checked |
 | `agent_runs` metering (tokens, cost in micro-USD, tool calls, evidence shown, verification) | migration 0004 | covered by agent tests |
-| CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
+| **Users and roles** (token hashes only), **four-eyes** approvals, incident **origin** labels | migration 0005, `packages/db/src/users.ts` | four-eyes test + API tests |
+| **HTTP API** (overview, incidents, replay, approvals, audit, actions, Lab) with role checks and tenant scoping | `apps/api/src/http/api.ts` | 11 API integration tests (auth, roles, Scenario A/B/C, four-eyes, reject, tenant isolation) |
+| **Scenario Lab** MOCK mode (MockProvider on the observation log, scenarios, events, race) and **Mock AI** | `apps/api/src/lab/*`, `apps/api/src/agent/mock-investigator.ts` | covered by API tests |
+| **Operator console**: Overview, Incidents, Incident Workspace, Decision Replay, Approval Center, Scenario Lab, Audit log | `apps/web` | Browser-verified (see below). No automated UI tests yet |
+| CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
 
 Covered scenarios (MOCK provider, real Postgres):
 - **A:** SENT → WAIT, and "Resend anyway" is blocked and audited. Then FAILED (bank return) followed by a bare CANCELLED → REPLACE → proposal → bound approval → executor → replacement PAID → RESOLVED with the original's fate recorded → books balance.
@@ -40,7 +44,15 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck, 147 unit tests, 49 Postgres integration tests (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck (API + web), 147 unit tests, 61 Postgres integration tests (Docker required). Last run: all passing.
+- Console run: see README "Run the console". The preview launch config is in `.claude/launch.json` (`api`, `web`).
+
+Browser check (Oct 27, built-in browser pane, MOCK mode):
+- Scenario A was run as operator, then approver. The steps: WAIT; investigator verified; "Resend anyway" blocked with reasons; bank return injected; REPLACE; the investigator proposes; approved and sent; replacement PAID; RESOLVED. The books balanced and the audit chain verified (29 entries).
+- Scenario C escalated, with the risk-flag block shown.
+- Decision Replay stepped to the WAIT → REPLACE change.
+- Also checked: the not-found error state, the empty approval queue, and no horizontal overflow on 8 pages at 375px.
+- Two UX bugs were found and fixed during the check: stale action results after a decision change, and approval outcomes disappearing.
 - `pnpm test`: unit tests only.
 
 ## Founder steps (only you can do these)
@@ -55,7 +67,10 @@ Commands:
 
 1. With keys: run the sandbox feasibility sequence. Wire `airwallexExecutionProvider` into a sandbox Scenario A run.
 2. With an Anthropic key (ANTHROPIC_API_KEY in `.env`, or `ant auth login`): `pnpm investigate <incidentId>` on a local incident. Tune the prompt only if the verifier rejects real reports.
-3. Without keys: the HTTP API for the console (incidents, evidence, decisions, agent runs and diffs, proposals, approvals, audit), then T3b, the web console (Incident Workspace, Decision Replay, Approval Center, Scenario Lab).
+3. Without keys, in the T3b/T4 remainder:
+   - an automated Playwright smoke suite (use system Chrome via `channel: "chrome"` to avoid a browser download);
+   - a one-command `docker compose up` for API + console;
+   - then T4: the adversarial suite and scoreboard, the eval suite, TLA+.
 
 ## Known gaps and shortcuts
 
@@ -63,9 +78,12 @@ Commands:
 - `getBeneficiary` returns raw JSON. The beneficiary hash uses `beneficiary.bank_details` (unconfirmed shape); if it is absent, execution is blocked.
 - The executor uses `transferMethod: "LOCAL"`, `reason: "goods_purchased"`, and source currency = payment currency. Fees are not posted to the ledger yet.
 - Resolution uses PAID as "settled" for the sandbox demo, although Airwallex documents that PAID can still fail. A late failure after resolution needs a REOPEN path, which is not wired yet.
-- Only one tenant is wired into the API. Users, roles and per-tenant secrets come with the console API.
+- Webhooks and the backup poller are wired to one tenant (`SENTINEL_ORGANIZATION_ID`). The API itself is tenant-scoped by user. Per-tenant provider connections and webhook secrets are not built.
+- Scenario Lab SANDBOX mode is not built (needs keys). In the UI it shows as "needs keys".
+- The MockProvider keeps the simulated wallet in memory. It resets per scenario and on API restart.
+- The console has no automated tests yet. It was verified manually in the browser.
 - The audit chain detects edits, deletions and reordering. On its own it does not detect truncation of the newest entries, or a privileged rewrite of the whole chain. Exported checkpoints are planned (T5 security notes).
-- `docker compose up` runs only Postgres today.
+- `docker compose up` runs only Postgres today. API and console start with `pnpm api` / `pnpm web`.
 - The investigator has only been exercised with a scripted MOCK model. Real-model behaviour (citation discipline, verifier pass rate, cost per run) is unmeasured.
 - Supplier-text screening is pattern-based. It is broad on purpose, but it can be evaded by paraphrase, so the beneficiary-hash check at execution remains the hard stop.
 - No prompt caching yet. The system prompt and tools are stable, so adding `cache_control` is a cheap later win.

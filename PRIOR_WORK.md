@@ -35,6 +35,10 @@ Recorded October 27, 2026, during Phase 0.
 
 - policy text-signals; db supplier-message intake and migration 0004; apps/api/src/agent (loop, tools, verifier, report schema, prompt, diff, model client, MOCK model for tests) and the investigate CLI. Uses the official `@anthropic-ai/sdk` (MIT) as a dependency.
 
+## Claude Code T3b (October 27, 2026), all written during the hackathon
+
+- Migration 0005 (users, origin, proposer), users service, four-eyes; apps/api HTTP API, Scenario Lab (MOCK provider, scenarios, race), Mock AI investigator, seed CLI; apps/web operator console. Dependencies: React, Vite, Tailwind, Radix UI (all MIT).
+
 ## Required follow-up
 
 Before importing prior work, record its source repository/path, author, license, original date, reused parts, and changes made during the hackathon. Add externally reused code and assets to this record. Do not represent templates, prior patterns, generated results, or unrun evaluations as new measured results.

@@ -4,7 +4,13 @@
 
 Quantum Sentinel is an entry in the Airwallex Agentic Banking Hackathon 2026 (Kit 3: Payment Ops Incident Commander). It investigates stuck or failed supplier payments on the **Airwallex sandbox** and recommends **WAIT**, **REPLACE** or **ESCALATE**. It changes its recommendation when new evidence arrives. Deterministic code and a bound human approval stand between the AI and any money movement, so the same obligation can never be paid twice.
 
-**Status: T3a investigator.** The safety core (duplicate-payment fence, incident state machine, bound approvals, executor, audit chain, ledger) and the Claude investigator (read-only tools, `propose_action`, grounding verifier) are built and tested with a MOCK Airwallex, a MOCK model and a real local Postgres. **Nothing has run against the Airwallex sandbox or the live Claude API yet: the sandbox and Anthropic API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
+**Status: T3b operator console.** Built and tested with a MOCK Airwallex, a MOCK AI and a real local Postgres:
+- the safety core: duplicate-payment fence, incident state machine, bound approvals, executor, audit chain and ledger;
+- the Claude investigator: read-only tools, `propose_action`, grounding verifier;
+- the HTTP API with roles;
+- the web console: Incident Workspace, Decision Replay, Approval Center, Scenario Lab and Audit log.
+
+All three scenarios run end to end in the console in MOCK mode. **Nothing has run against the Airwallex sandbox or the live Claude API yet: the sandbox and Anthropic API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
 
 Start here:
 
@@ -25,6 +31,17 @@ pnpm install && pnpm check
 
 `pnpm check` runs lint, typecheck, the unit tests, and the integration tests. The integration tests start Sentinel's own Postgres with Docker Compose on `127.0.0.1:54329`. They never use port 5432.
 
+### Run the console (no keys needed: MOCK mode)
+
+1. Create a git-ignored `.env` from the template (PowerShell command below). Run `pnpm seed:demo` once. It prints a `SENTINEL_ORGANIZATION_ID` line; add it to `.env`.
+2. Run `pnpm seed:demo` again. It creates an owner, an operator, an approver and a viewer, and prints each sign-in token once.
+3. Start the database and API with `pnpm db:up` and `pnpm api` (`:4000`). In another terminal, start the console with `pnpm web` (`:5173`).
+4. Open http://localhost:5173, sign in with the operator token, then go to **Scenario Lab** and start Scenario A.
+
+Without Airwallex keys, the Lab runs in MOCK mode: Sentinel simulates the provider and nothing leaves the machine. Without an Anthropic key, the investigator is the labelled **Mock AI**. Both are shown in the top bar on every screen. Set `APPROVAL_HMAC_SECRET` in `.env` so approvals survive an API restart.
+
+### Sandbox and live AI
+
 To talk to the sandbox, create a git-ignored `.env` from the template. In PowerShell:
 
 ```powershell
@@ -43,7 +60,9 @@ Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screen
 | `pnpm sandbox transition --id <id> --to FAILED --failure-type BENEFICIARY_BANK_RETURNED` | **Simulated** status change |
 | `pnpm sandbox watch --id <id>` | Polls quickly and prints every status change with timing |
 | `pnpm sandbox history --id <id>` | Shows what Sentinel knows and its finality classification |
-| `pnpm api` | Webhook receiver on `:4000` plus the backup poller |
+| `pnpm api` | Operator API, webhook receiver, backup poller and executor worker on `:4000` |
+| `pnpm web` | Operator console on `:5173` (proxies `/api` to `:4000`) |
+| `pnpm seed:demo` | Creates the demo tenant and one sign-in token per role |
 | `pnpm audit:verify` | Recomputes the audit hash chain; exits 1 if anything was altered |
 | `pnpm reconcile` | Checks ledger and provider-transfer invariants; reports, never repairs |
 | `pnpm investigate <incidentId>` | Runs one live Claude investigation (spends API credits; needs Anthropic credentials) |
@@ -74,9 +93,10 @@ flowchart LR
 
 | Deliverable | Current result |
 | --- | --- |
-| Scenario A (WAIT → REPLACE → RESOLVED) | Passing against a MOCK provider and real Postgres; not yet run on the sandbox |
-| Scenarios B (races) and C (fraud / reconciliation) | Safety layer passing (MOCK provider); agent and UI not built |
-| Vitest / fast-check | 147 unit and 49 Postgres integration tests passing (`pnpm check`) |
+| Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK provider, Mock AI, real Postgres); not yet run on the sandbox |
+| Scenarios B (races) and C (fraud / reconciliation) | Run in the console and API tests (MOCK): B race gives 1 approval and 1 transfer; C escalates and blocks payment. Reconciliation mismatch is covered in DB tests (SYNTHETIC) |
+| Vitest / fast-check | 147 unit and 61 Postgres integration tests passing (`pnpm check`) |
+| Browser check | Console verified in a real browser (Scenario A, C, replay, approvals, error and empty states, no overflow at 375px). Automated Playwright suite not built yet |
 | AI investigator | Passing with a scripted MOCK model (honest, hallucinating, policy-overriding, prompt-injected); not yet run against the live API |
 | Playwright | Not implemented |
 | Attack scoreboard, EVAL.md | Not run; no results claimed |
