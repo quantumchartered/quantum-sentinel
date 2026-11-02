@@ -1,5 +1,6 @@
-# Quantum Sentinel local stack. Project name is fixed so it never collides with
-# other Compose projects on this machine (e.g. Quantum Chartered on :5432).
+# Quantum Sentinel local stack: `docker compose up --build`, then open http://localhost:4000
+# Project name is fixed so it never collides with other Compose projects on this machine
+# (e.g. Quantum Chartered on :5432). Everything binds to 127.0.0.1 only.
 name: quantum-sentinel
 
 services:
@@ -8,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: sentinel
       POSTGRES_USER: sentinel
-      # Local-only development password; override in .env. Bound to 127.0.0.1.
+      # Local-only development password; override in .env.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel_local_dev}
     ports:
       - "127.0.0.1:54329:5432"
@@ -19,6 +20,29 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Optional keys (Airwallex sandbox, Anthropic) come from .env if present; without them
+    # the console runs in MOCK mode with the labelled Mock AI.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://sentinel:${POSTGRES_PASSWORD:-sentinel_local_dev}@postgres:5432/sentinel
+      SENTINEL_ORGANIZATION_ID: ${SENTINEL_ORGANIZATION_ID:-6f1d2c3a-0000-4000-8000-00000000d3e0}
+      SENTINEL_DEMO_BOOTSTRAP: "1"
+      SENTINEL_DEMO_TOKENS_FILE: /app/.local/demo-tokens.json
+      HOST: 0.0.0.0
+      PORT: "4000"
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      # Sign-in tokens for the demo users land here (git-ignored).
+      - ./.local:/app/.local
 
 volumes:
   sentinel-pg:

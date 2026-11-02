@@ -22,7 +22,8 @@
     "investigate": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/investigate.ts",
     "seed:demo": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/seed.ts",
     "web": "pnpm --filter @sentinel/web dev",
-    "build:web": "pnpm --filter @sentinel/web build"
+    "build:web": "pnpm --filter @sentinel/web build",
+    "up": "docker compose up --build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

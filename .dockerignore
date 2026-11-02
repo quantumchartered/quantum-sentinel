@@ -1,0 +1,13 @@
+# Never ship secrets, local state or host build output into the image.
+.env
+.env.*
+!.env.example
+.local
+.git
+**/node_modules
+**/dist
+fixtures
+test-results
+playwright-report
+e2e/.tokens.json
+*.log

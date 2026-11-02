@@ -16,9 +16,10 @@ export interface DbOptions {
 }
 
 export function createDb(opts: DbOptions): Db {
-  if (/:5432\//.test(opts.connectionString) && !process.env.SENTINEL_ALLOW_PORT_5432) {
-    // Port 5432 on this machine belongs to another project; refuse rather than touch it.
-    throw new Error("Refusing DATABASE_URL on port 5432; Sentinel's Postgres listens on 54329");
+  // Port 5432 on this machine belongs to another project; refuse rather than touch it.
+  // (Inside Docker Compose, Sentinel's own Postgres is reached by service name, e.g. postgres:5432.)
+  if (/@(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0):5432\//.test(opts.connectionString)) {
+    throw new Error("Refusing DATABASE_URL on localhost:5432; Sentinel's Postgres listens on 54329");
   }
   const pool = new pg.Pool({
     connectionString: opts.connectionString,

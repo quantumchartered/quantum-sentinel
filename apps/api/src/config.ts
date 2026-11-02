@@ -20,6 +20,9 @@ const ConfigSchema = z.object({
   SENTINEL_INVESTIGATOR: z.enum(["claude", "mock"]).optional(),
   ANTHROPIC_API_KEY: optional,
   ANTHROPIC_MODEL: optional,
+  // Local demo: create the tenant and one user per role on first start; tokens go to SENTINEL_DEMO_TOKENS_FILE.
+  SENTINEL_DEMO_BOOTSTRAP: z.enum(["0", "1"]).default("0"),
+  SENTINEL_DEMO_TOKENS_FILE: optional,
   PORT: z.coerce.number().int().positive().default(4000),
   HOST: z.string().default("127.0.0.1"),
   POLL_INTERVAL_MS: z.coerce.number().int().min(1000).default(15_000),

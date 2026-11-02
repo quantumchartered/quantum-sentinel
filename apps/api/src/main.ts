@@ -5,6 +5,7 @@ import { type ApprovalKeys, airwallexExecutionProvider, createDb, executeReplace
 import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { MOCK_MODEL_ID, MockInvestigatorModel } from "./agent/mock-investigator.js";
 import { DEFAULT_MODEL, anthropicModelClient } from "./agent/model.js";
+import { bootstrapDemo } from "./bootstrap.js";
 import { loadConfig } from "./config.js";
 import type { ApiDeps, Provider } from "./http/api.js";
 import { MockProvider } from "./lab/mock-provider.js";
@@ -14,6 +15,11 @@ import { buildServer } from "./server.js";
 const config = loadConfig();
 const db = createDb({ connectionString: config.DATABASE_URL });
 await migrate(db);
+if (config.SENTINEL_DEMO_BOOTSTRAP === "1") {
+  const tokensFile = config.SENTINEL_DEMO_TOKENS_FILE ?? fileURLToPath(new URL("../../../.local/demo-tokens.json", import.meta.url));
+  const r = await bootstrapDemo(db, config.SENTINEL_ORGANIZATION_ID, tokensFile);
+  console.log(r === "created" ? `Demo users created; sign-in tokens written to ${tokensFile}` : "Demo tenant already has users; tokens unchanged");
+}
 
 const airwallexClient =
   config.AIRWALLEX_CLIENT_ID && config.AIRWALLEX_API_KEY
