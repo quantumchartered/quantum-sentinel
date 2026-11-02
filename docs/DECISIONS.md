@@ -68,3 +68,6 @@ October 27, 2026. Design proposals awaiting the user's Phase 0 review; no implem
 | D57 | Demo bootstrap writes role tokens to `.local/demo-tokens.json` (git-ignored, mode 600), never to logs | Directive: never log keys. A fresh clone still gets working sign-in without any manual seeding. |
 | D58 | Port guard refuses only `localhost:5432` | The guard protects the other project on the dev machine; inside Compose, Sentinel's Postgres is `postgres:5432`. |
 | D59 | Playwright uses the installed Chrome (`channel: "chrome"`) against an isolated `sentinel_e2e` DB and API on `:4100` | No browser download, never touches the developer's demo data; tests run serially because they tell one story. |
+| D60 | An attack counts as succeeded only if its unsafe outcome is observed after the attempt; a harness error counts as succeeded | An error message is not proof of safety; failing open in the scoreboard would hide a broken check. |
+| D61 | AI attacks use scripted "compromised" models that obey the injected text | A worst case for model obedience. It tests the controls around the model, not a real model's resistance (that needs live runs). |
+| D62 | The attack suite also runs inside `pnpm check`; the scoreboard records the commit and flags uncommitted code | A regression that lets any attack through fails CI; the published scoreboard is traceable to exact code. |

@@ -371,3 +371,9 @@ Actual outcomes, time-to-recommendation, and duplicates blocked are **not run** 
 3. Which Quantum Chartered repositories, code, or patterns must be disclosed as prior work?
 4. Can we explicitly use labeled simulated transfer-return/arrival evidence for the demo where sandbox APIs do not establish irreversible settlement? Without it, ambiguous finality must ESCALATE.
 5. After reviewing this plan and the contract discrepancies, do you approve Phase 1? No app code will be written until that OK.
+
+**T4 Advanced (Nov 8–10), started early on Nov 2**
+- [x] Adversarial suite and scoreboard: 33 attacks, 0 succeeded (`pnpm attacks`, docs/ATTACKS.md)
+- [ ] Eval suite (`pnpm eval`, about 20 cases, EVAL.md)
+- [ ] TLA+ model of the no-double-payment invariant (TLC in a container)
+- [ ] Arrival-probability and expected-cost estimate (labelled illustrative priors)
