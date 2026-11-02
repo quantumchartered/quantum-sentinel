@@ -16,14 +16,17 @@ Then open http://localhost:4000. Sign-in tokens for an owner, operator, approver
 | --- | --- |
 | ![Incident Workspace: WAIT, resend blocked](docs/screenshots/06-workspace-wait-resend-blocked.png) | ![Decision Replay: WAIT to REPLACE](docs/screenshots/10-decision-replay.png) |
 | ![Approval Center: bound facts](docs/screenshots/08-approval-center.png) | ![Scenario C: escalated, payment blocked](docs/screenshots/11-scenario-c-escalated.png) |
+| ![Agent Activity: tool calls, verifier, cost](docs/screenshots/15-agent-activity.png) | ![Reconciliation: findings and ledger](docs/screenshots/16-reconciliation.png) |
 
 *Screenshots are captured by the end-to-end tests (`pnpm test:e2e`) in MOCK mode.*
 
-**Status: T3b operator console.** Built and tested with a MOCK Airwallex, a MOCK AI and a real local Postgres:
+**Status: T4 advanced work done; T5 (ship) in progress.** Built and tested with a MOCK Airwallex, a MOCK AI and a real local Postgres:
 - the safety core: duplicate-payment fence, incident state machine, bound approvals, executor, audit chain and ledger;
 - the Claude investigator: read-only tools, `propose_action`, grounding verifier;
 - the HTTP API with roles;
-- the web console: Incident Workspace, Decision Replay, Approval Center, Scenario Lab and Audit log.
+- the web console: Overview, Incident Workspace, Decision Replay, Approval Center, Scenario Lab, Agent Activity, Reconciliation and Audit log;
+- an advisory arrival and cost estimate from labelled illustrative priors, which never changes what policy allows;
+- an attack suite, an evaluation matrix and a TLA+ model of the no-double-payment rule.
 
 All three scenarios run end to end in the console in MOCK mode. **Nothing has run against the Airwallex sandbox or the live Claude API yet: the sandbox and Anthropic API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
 
@@ -35,6 +38,7 @@ Start here:
 - [docs/PLAN.md](docs/PLAN.md): architecture, state machines, policy invariants and the backlog.
 - [docs/SETUP.md](docs/SETUP.md): sandbox account, MCP and secrets.
 - [PRIOR_WORK.md](PRIOR_WORK.md): what was built during the hackathon and what came before.
+- [SECURITY_AND_LIMITATIONS.md](SECURITY_AND_LIMITATIONS.md): the controls that protect money and data, and what is known to be missing.
 
 ## Setup
 
@@ -88,21 +92,36 @@ Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screen
 | `pnpm reconcile` | Checks ledger and provider-transfer invariants; reports, never repairs |
 | `pnpm investigate <incidentId>` | Runs one live Claude investigation (spends API credits; needs Anthropic credentials) |
 
-## Architecture (planned)
+## Architecture
 
 ```mermaid
 flowchart LR
-  A[Signed webhooks / backup poller] --> B[Append-only provider events]
-  B --> C[Deterministic incident engine]
-  C --> D[Evidence store + policy engine]
-  D --> E[Claude investigator: read-only tools + propose_action]
-  E --> F[Grounding verifier]
-  F --> G[Bound human approval]
-  G --> H[Outbox executor, new request_id]
-  H --> I[Airwallex sandbox]
-  I --> B
-  C --> J[Hash-chained audit + Decision Replay]
+  subgraph AW[Airwallex sandbox]
+    API[REST API]
+    WH[Webhooks]
+  end
+  WH -->|HMAC-verified| IN[Webhook receiver]
+  PO[Backup poller] -->|read| API
+  IN --> OBS[(Append-only transfer observations)]
+  PO --> OBS
+  OBS --> FIN[Finality fold<br/>packages/policy]
+  FIN --> DEC[decide: WAIT / REPLACE / ESCALATE<br/>code, not the model]
+  SUP[Supplier emails<br/>untrusted] --> SCR[Text screening in code] --> DEC
+  DEC --> INC[Incident state machine]
+  INC --> AI[Claude investigator<br/>read-only tools]
+  AI -->|propose_action only| PROP[Proposal]
+  AI --> VER[Grounding verifier]
+  PROP --> APP[Bound human approval<br/>HMAC, 15 min, four-eyes]
+  APP --> EX[Outbox executor<br/>lease, lookup, re-check under lock]
+  EX -->|stable request_id| API
+  FENCE[(One blocking payment per invoice<br/>partial unique index)] -.guards.- APP
+  FENCE -.guards.- EX
+  INC --> AUD[(Hash-chained audit)]
+  EX --> LED[(Double-entry ledger)] --> REC[Reconciliation]
+  AUD --> UI[Console: Workspace, Decision Replay,<br/>Approvals, Lab, Agent Activity, Reconciliation]
 ```
+
+The model reads and explains. Code decides what is allowed, a person approves, and only the executor calls Airwallex write endpoints. Details: [docs/PLAN.md](docs/PLAN.md) §0.2–0.3, [SECURITY_AND_LIMITATIONS.md](SECURITY_AND_LIMITATIONS.md).
 
 ## Safety boundary
 
@@ -114,8 +133,9 @@ flowchart LR
 | --- | --- |
 | Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK provider, Mock AI, real Postgres); not yet run on the sandbox |
 | Scenarios B (races) and C (fraud / reconciliation) | Run in the console and API tests (MOCK): B race gives 1 approval and 1 transfer; C escalates and blocks payment. Reconciliation mismatch is covered in DB tests (SYNTHETIC) |
-| Vitest / fast-check | 169 unit and 126 Postgres integration tests passing (`pnpm check`) |
-| Browser tests (Playwright) | 11 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, audit, no sideways scroll at 375px |
+| Vitest / fast-check | 183 unit and 127 Postgres integration tests passing (`pnpm check`) |
+| Browser tests (Playwright) | 13 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, cost estimate, Agent Activity, Reconciliation, audit, no sideways scroll at 375px |
+| Arrival and cost estimate | Advisory, from labelled illustrative priors (`packages/policy/src/estimate.ts`): Scenario A shows WAIT cheapest while the original is in flight and REPLACE cheapest after the bank return; a replacement policy forbids is never priced |
 | AI investigator | Passing with a scripted MOCK model (honest, hallucinating, policy-overriding, prompt-injected); not yet run against the live API |
 | Attack scoreboard | [33 attacks run, 0 succeeded](docs/ATTACKS.md) (`pnpm attacks`; MOCK provider, scripted / Mock AI models, real Postgres and API) |
 | Evaluation | [24 / 24 cases pass](EVAL.md) (`pnpm eval`; MOCK provider, Mock AI; `pnpm eval --live` for Claude). Unsafe actions blocked 25/25 |

@@ -1,6 +1,6 @@
 # Progress and handoff
 
-Updated November 2, 2026 by Claude Code. Branch: `t4/attacks`, stacked on `t3b/console`, `t3a/investigator`, `t2/safety-core`, `t1/integration` and `codex/phase-0-plan`. Nothing is merged to `main` yet.
+Updated November 2, 2026 by Claude Code (T4 complete). Branch: `t4/attacks`, stacked on `t3b/console`, `t3a/investigator`, `t2/safety-core`, `t1/integration` and `codex/phase-0-plan`. Nothing is merged to `main` yet.
 
 ## Current stopping point
 
@@ -41,6 +41,9 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **Evaluation matrix** (24 cases, every §12 case type) | `apps/api/src/eval/`, `EVAL.md` | 24/24 pass; inside `pnpm check`; mutation-checked (ACCOUNT_CLOSED made replaceable -> E07 fails) |
 | **Policy tightening** (policy-2026-11-02.1): replaceable failure types only, missing provider record escalates, supplier receipt claims raise EVIDENCE_CONFLICT | `packages/policy/src/{decide,text-signals}.ts` | 22 unit tests |
 | **TLA+ model** of no double payment, checked by TLC (16-row matrix: design, pre-fix design, each defence removed, reachability witnesses) | `spec/`, `spec/RESULTS.md` | `pnpm spec`: design holds up to 3 workers / 3 replacements / 4 claims (1.4M states). Found a real race (stale worker released the fence while another sent); fixed in `execution.ts` (`releaseOrHold`, D68) and replayed in 4 integration tests that fail on the old rule |
+| **Arrival and cost estimate** (advisory, labelled illustrative priors; never feeds `decide()`, never prices a forbidden replacement) | `packages/policy/src/estimate.ts`, `GET /api/incidents/:id` (`estimate`), Incident Workspace card | 14 unit tests incl. fast-check; API and browser assertions on Scenario A |
+| **Should-tier screens**: Agent Activity (runs, tool calls, verifier, tokens, cost) and Reconciliation (run, findings, ledger, provider transfers) | `apps/web/src/pages/{AgentActivity,Reconciliation}.tsx`, `GET /api/agent-runs`, `GET /api/reconciliation` | API test (roles, tenant isolation); 2 Playwright tests + 375px check |
+| **SECURITY_AND_LIMITATIONS.md** and the as-built architecture diagram (README) | root | Doc; every claim points at code or a test |
 | CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
 
 Covered scenarios (MOCK provider, real Postgres):
@@ -50,7 +53,7 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck (API + web), 169 unit tests, 126 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck (API + web), 183 unit tests, 127 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
 - Console run: see README "Run the console". The preview launch config is in `.claude/launch.json` (`api`, `web`).
 
 Browser check (Oct 27, built-in browser pane, MOCK mode):
@@ -60,7 +63,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 - Also checked: the not-found error state, the empty approval queue, and no horizontal overflow on 8 pages at 375px.
 - Two UX bugs were found and fixed during the check: stale action results after a decision change, and approval outcomes disappearing.
 - `pnpm test`: unit tests only.
-- `pnpm test:e2e`: 11 Playwright browser tests (needs Docker and Google Chrome). Last run: all passing.
+- `pnpm test:e2e`: 13 Playwright browser tests (needs Docker and Google Chrome). Last run: all passing.
 - `docker compose up --build` (or `pnpm up`): the whole app on http://localhost:4000.
 
 ## Founder steps (only you can do these)
@@ -75,7 +78,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 
 1. With keys: run the sandbox feasibility sequence. Wire `airwallexExecutionProvider` into a sandbox Scenario A run.
 2. With an Anthropic key (ANTHROPIC_API_KEY in `.env`, or `ant auth login`): `pnpm investigate <incidentId>` on a local incident. Tune the prompt only if the verifier rejects real reports.
-3. Without keys: continue T4. The attack suite, the eval suite and the TLA+ model are done. Next the arrival-probability / expected-cost estimate (labelled illustrative priors), then the Should-tier screens.
+3. Without keys: T4 is done (attacks, eval, TLA+, estimate, Should-tier screens). T5 remains: the REOPEN path for a failure after PAID, posting fees to the ledger, and the demo recording (founder). The Could-tier screens (Analytics, Organization Settings) are optional.
 
 ## Known gaps and shortcuts
 

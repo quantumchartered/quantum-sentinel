@@ -151,7 +151,24 @@ export interface IncidentDetail {
   proposals: { id: string; incidentVersion: number; proposedBy: string; facts: Record<string, unknown>; createdAt: string; current: boolean }[];
   agentRuns: AgentRun[];
   ledger: Record<string, string>;
+  estimate: CostEstimate | null;
 }
+
+export type CostEstimate = { priorsVersion: string; label: string; policyRecommendation: Recommendation | null } & (
+  | { available: false; reason: string }
+  | {
+      available: true;
+      horizonHours: number;
+      originalArrivalBps: number;
+      originalArrivalRangeBps: { low: number; high: number };
+      costs: (
+        | { action: Recommendation; allowed: true; expectedCostMinor: string; parts: { feeMinor: string; delayMinor: string; reviewMinor: string } }
+        | { action: Recommendation; allowed: false; reason: string }
+      )[];
+      cheapestAllowed: Recommendation;
+      priors: { horizonHours: number; reviewDelayHours: number; delayCostBpsPerDay: number };
+    }
+);
 
 export interface ApprovalItem {
   proposalId: string;
@@ -191,4 +208,34 @@ export interface ReplayData {
   observations: { id: string; at: string; paymentRole: "ORIGINAL" | "REPLACEMENT" | null; providerTransferId: string; source: string; status: string; failureType: string | null; failureMessage: string | null }[];
   evidence: { id: string; at: string; kind: string; source: string; trusted: boolean }[];
   agentRuns: AgentRun[];
+}
+
+export interface AgentActivity {
+  totals: { status: string; runs: number; inputTokens: string; outputTokens: string; costMicroUsd: string }[];
+  runs: {
+    id: string;
+    incidentId: string;
+    incidentTitle: string | null;
+    origin: Origin;
+    status: string;
+    model: string;
+    incidentVersion: number;
+    policyRecommendation: Recommendation;
+    reportRecommendation: Recommendation | null;
+    steps: number;
+    inputTokens: number;
+    outputTokens: number;
+    costMicroUsd: string;
+    toolCalls: { step: number; name: string; ok: boolean; summary: string }[];
+    verification: { ok: boolean; errors: number; warnings: number } | null;
+    error: string | null;
+    startedAt: string;
+    finishedAt: string;
+  }[];
+}
+
+export interface ReconciliationView {
+  runs: { id: string; startedAt: string; ok: boolean; findings: { severity: "error" | "warning"; code: string; detail: Record<string, unknown> }[] }[];
+  ledger: { account: string; currency: string; total: string; lines: number }[];
+  providerTransfers: { seen: number; linkedToPayments: number };
 }

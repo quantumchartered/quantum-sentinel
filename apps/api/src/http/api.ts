@@ -26,7 +26,7 @@ import {
   tryResolveIncident,
   verifyStoredAuditChain,
 } from "@sentinel/db";
-import { classifyFinality, foldObservations } from "@sentinel/policy";
+import { ESTIMATE_PRIORS, classifyFinality, estimate, foldObservations } from "@sentinel/policy";
 import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -221,6 +221,7 @@ export function registerApi(app: FastifyInstance, deps: ApiDeps): void {
       .where(and(eq(schema.proposedActions.organizationId, o), eq(schema.proposedActions.incidentId, id)))
       .orderBy(asc(schema.proposedActions.createdAt));
     const runs = await agentRunsWithDiffs(db, o, id);
+    const [orgRow] = await db.select().from(schema.organizations).where(eq(schema.organizations.id, o));
     return {
       incident: { ...inc, openedAt: inc.openedAt.toISOString(), updatedAt: inc.updatedAt.toISOString() },
       obligation: ob && { ...ob, amountMinor: ob.amountMinor.toString(), dueAt: ob.dueAt.toISOString() },
@@ -230,6 +231,7 @@ export function registerApi(app: FastifyInstance, deps: ApiDeps): void {
       proposals: proposals.map((p) => ({ id: p.id, incidentVersion: p.incidentVersion, proposedBy: p.proposedBy, facts: p.facts, createdAt: p.createdAt.toISOString(), current: inc.state === "AWAITING_APPROVAL" && p.incidentVersion === inc.version })),
       agentRuns: runs,
       ledger: Object.fromEntries(Object.entries(await accountBalances(db, o, inc.obligationId)).map(([k, v]) => [k, v.toString()])),
+      estimate: ob ? costEstimate({ payments, obligation: ob, latest: decisions.at(-1)?.recommendation ?? null, feeMinor: orgRow?.replacementFeeMinor ?? 0n, now: deps.now?.() ?? Date.now() }) : null,
     };
   });
 
@@ -310,6 +312,87 @@ export function registerApi(app: FastifyInstance, deps: ApiDeps): void {
   });
 
   app.get("/api/audit/verify", { preHandler: guard(READ) }, async (req) => verifyStoredAuditChain(db, org(req)));
+
+  /** Agent Activity: every investigator run in the organization, newest first. */
+  app.get("/api/agent-runs", { preHandler: guard(READ) }, async (req) => {
+    const o = org(req);
+    const q = z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
+    const rows = await db
+      .select({ r: schema.agentRuns, title: schema.incidents.title, origin: schema.incidents.origin })
+      .from(schema.agentRuns)
+      .innerJoin(schema.incidents, and(eq(schema.incidents.id, schema.agentRuns.incidentId), eq(schema.incidents.organizationId, schema.agentRuns.organizationId)))
+      .where(eq(schema.agentRuns.organizationId, o))
+      .orderBy(desc(schema.agentRuns.finishedAt))
+      .limit(q.limit);
+    const totals = await db
+      .select({
+        status: schema.agentRuns.status,
+        n: sql<number>`count(*)::int`,
+        inputTokens: sql<string>`coalesce(sum(input_tokens),0)::text`,
+        outputTokens: sql<string>`coalesce(sum(output_tokens),0)::text`,
+        cost: sql<string>`coalesce(sum(cost_micro_usd),0)::text`,
+      })
+      .from(schema.agentRuns)
+      .where(eq(schema.agentRuns.organizationId, o))
+      .groupBy(schema.agentRuns.status);
+    return {
+      totals: totals.map((t) => ({ status: t.status, runs: t.n, inputTokens: t.inputTokens, outputTokens: t.outputTokens, costMicroUsd: t.cost })),
+      runs: rows.map(({ r, title, origin }) => {
+        const report = r.report as IncidentReport | null;
+        const v = r.verification as { ok: boolean; errors: unknown[]; warnings: unknown[] } | null;
+        return {
+          id: r.id,
+          incidentId: r.incidentId,
+          incidentTitle: title,
+          origin,
+          status: r.status,
+          model: r.model,
+          incidentVersion: r.incidentVersion,
+          policyRecommendation: r.policyRecommendation,
+          reportRecommendation: report?.recommendation ?? null,
+          steps: r.steps,
+          inputTokens: r.inputTokens,
+          outputTokens: r.outputTokens,
+          costMicroUsd: r.costMicroUsd.toString(),
+          toolCalls: r.toolCalls,
+          verification: v && { ok: v.ok, errors: v.errors.length, warnings: v.warnings.length },
+          error: r.error,
+          startedAt: r.startedAt.toISOString(),
+          finishedAt: r.finishedAt.toISOString(),
+        };
+      }),
+    };
+  });
+
+  /** Reconciliation view: recent runs with findings, and the organization's ledger totals. */
+  app.get("/api/reconciliation", { preHandler: guard(READ) }, async (req) => {
+    const o = org(req);
+    const runs = await db
+      .select()
+      .from(schema.reconciliationRuns)
+      .where(eq(schema.reconciliationRuns.organizationId, o))
+      .orderBy(desc(schema.reconciliationRuns.startedAt))
+      .limit(20);
+    const ledger = await db
+      .select({ account: schema.ledgerEntries.account, currency: schema.ledgerEntries.currency, total: sql<string>`sum(amount_minor)::text`, lines: sql<number>`count(*)::int` })
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.organizationId, o))
+      .groupBy(schema.ledgerEntries.account, schema.ledgerEntries.currency)
+      .orderBy(asc(schema.ledgerEntries.currency), asc(schema.ledgerEntries.account));
+    const [transfers] = await db
+      .select({ seen: sql<number>`count(distinct provider_transfer_id)::int` })
+      .from(schema.transferObservations)
+      .where(eq(schema.transferObservations.organizationId, o));
+    const [linked] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.payments)
+      .where(and(eq(schema.payments.organizationId, o), sql`${schema.payments.providerTransferId} is not null`));
+    return {
+      runs: runs.map((r) => ({ id: r.id, startedAt: r.startedAt.toISOString(), ok: r.ok, findings: r.findings })),
+      ledger,
+      providerTransfers: { seen: transfers?.seen ?? 0, linkedToPayments: linked?.n ?? 0 },
+    };
+  });
 
   // ---------- operator actions ----------
 
@@ -414,6 +497,36 @@ export function registerApi(app: FastifyInstance, deps: ApiDeps): void {
     const body = z.object({ approvers: z.number().int().min(1).max(25).default(10), executors: z.number().int().min(1).max(25).default(10) }).parse(req.body ?? {});
     return raceApprovals(db, deps.mockProvider(org(req)), org(req), id, deps.keys, body);
   });
+}
+
+/**
+ * Advisory arrival and cost estimate (illustrative priors). Computed on read and
+ * never stored as a decision input: policy alone decides what is allowed.
+ */
+function costEstimate(p: {
+  payments: { role: string; finality: ReturnType<typeof classifyFinality>; observations: { status: string; observedAt: string }[] }[];
+  obligation: { amountMinor: bigint; currency: string; dueAt: Date };
+  latest: string | null;
+  feeMinor: bigint;
+  now: number;
+}) {
+  const meta = { priorsVersion: ESTIMATE_PRIORS.version, label: ESTIMATE_PRIORS.label };
+  if (p.payments.some((x) => x.role === "REPLACEMENT")) return { available: false as const, reason: "replacement_already_sent", ...meta };
+  const original = p.payments.find((x) => x.role === "ORIGINAL");
+  if (!original) return { available: false as const, reason: "no_original_payment", ...meta };
+  const sentAt = original.observations.find((x) => x.status === "SENT" || x.status === "PROCESSING")?.observedAt;
+  const hours = (ms: number) => Math.floor(ms / 3_600_000);
+  const e = estimate({
+    original: original.finality,
+    hoursSinceSent: sentAt ? Math.max(0, hours(p.now - Date.parse(sentAt))) : null,
+    hoursUntilDue: hours(p.obligation.dueAt.getTime() - p.now),
+    amountMinor: p.obligation.amountMinor,
+    currency: p.obligation.currency,
+    replacementFeeMinor: p.feeMinor,
+    replacementAllowed: p.latest === "REPLACE",
+  });
+  const json = JSON.parse(JSON.stringify(e, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v))) as Record<string, unknown>;
+  return { ...json, policyRecommendation: p.latest, priors: e.available ? { horizonHours: ESTIMATE_PRIORS.horizonHours, reviewDelayHours: ESTIMATE_PRIORS.reviewDelayHours, delayCostBpsPerDay: ESTIMATE_PRIORS.delayCostBpsPerDay } : undefined };
 }
 
 /** Agent runs for an incident, each with the diff from the previous completed run. */

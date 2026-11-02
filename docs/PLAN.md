@@ -376,4 +376,9 @@ Actual outcomes, time-to-recommendation, and duplicates blocked are **not run** 
 - [x] Adversarial suite and scoreboard: 33 attacks, 0 succeeded (`pnpm attacks`, docs/ATTACKS.md)
 - [x] Eval suite: 24 cases, 24 pass (`pnpm eval`, EVAL.md); live-model mode `--live`
 - [x] TLA+ model of the no-double-payment invariant (`pnpm spec`, spec/RESULTS.md); found and fixed a stale-worker fence release (D68)
-- [ ] Arrival-probability and expected-cost estimate (labelled illustrative priors)
+- [x] Arrival-probability and expected-cost estimate (labelled illustrative priors; advisory only, D69)
+- [x] Should-tier screens: Agent Activity, Reconciliation (D70)
+
+**T5 Ship (Nov 10–12), started early on Nov 2**
+- [x] `SECURITY_AND_LIMITATIONS.md`, as-built architecture diagram in the README
+- [ ] Clean-install rehearsal, demo recording (founder), REOPEN path for a failure after PAID

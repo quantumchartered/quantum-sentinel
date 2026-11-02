@@ -95,8 +95,15 @@ describe("Scenario A over HTTP (MOCK provider, MOCK AI)", () => {
     expect(resend.json).toMatchObject({ blocked: true });
     expect(resend.json.reasons).toContain("replacement_would_risk_double_payment");
 
+    // Advisory estimate: labelled, WAIT cheapest, REPLACE forbidden rather than priced.
+    const est1 = (await call("viewer", "GET", `/api/incidents/${id}`)).json.estimate;
+    expect(est1).toMatchObject({ available: true, label: "ILLUSTRATIVE PRIORS", cheapestAllowed: "WAIT", policyRecommendation: "WAIT" });
+    expect(est1.costs.find((c: { action: string }) => c.action === "REPLACE")).toEqual({ action: "REPLACE", allowed: false, reason: "forbidden_by_policy" });
+
     await call("operator", "POST", `/api/lab/incidents/${id}/events`, { event: "ORIGINAL_FAILED_BANK_RETURN" });
     expect((await call("operator", "POST", `/api/incidents/${id}/evaluate`)).json).toMatchObject({ recommendation: "REPLACE", changed: true });
+    const est2 = (await call("viewer", "GET", `/api/incidents/${id}`)).json.estimate;
+    expect(est2).toMatchObject({ available: true, originalArrivalBps: 0, cheapestAllowed: "REPLACE", policyRecommendation: "REPLACE" });
     const inv2 = await call("operator", "POST", `/api/incidents/${id}/investigate`);
     expect(inv2.json).toMatchObject({ status: "COMPLETED", report: { recommendation: "REPLACE" } });
 
@@ -119,6 +126,7 @@ describe("Scenario A over HTTP (MOCK provider, MOCK AI)", () => {
       ["ORIGINAL", "CANCELLED"],
       ["REPLACEMENT", "PAID"],
     ]);
+    expect(detail.estimate).toMatchObject({ available: false, reason: "replacement_already_sent" });
     expect(detail.ledger).toMatchObject({ "WALLET:USD": "-2500000", "SUPPLIER_PAYABLE:USD": "0" });
     expect(detail.agentRuns.at(-1).diff.recommendation).toEqual({ from: "WAIT", to: "REPLACE", changed: true });
 
@@ -187,6 +195,25 @@ describe("isolation and guard rails", () => {
     const id = await openIncident(db, org, obligationId);
     expect((await call("operator", "POST", `/api/lab/incidents/${id}/events`, { event: "ORIGINAL_PAID" })).status).toBe(409);
     expect((await call("operator", "POST", `/api/incidents/${id}/evaluate`)).status).toBe(503);
+  });
+
+  it("Agent Activity and Reconciliation are read-only views scoped to the tenant", async () => {
+    const { json } = await call("operator", "POST", "/api/lab/scenarios", { scenario: "A", mode: "MOCK" });
+    await call("operator", "POST", `/api/incidents/${json.incidentId}/investigate`);
+    const runs = (await call("viewer", "GET", "/api/agent-runs")).json;
+    const mine = runs.runs.find((r: { incidentId: string }) => r.incidentId === json.incidentId);
+    expect(mine).toMatchObject({ status: "COMPLETED", model: "mock-investigator", origin: "MOCK_SCENARIO", reportRecommendation: "WAIT", policyRecommendation: "WAIT", verification: { ok: true, errors: 0 } });
+    expect(mine.toolCalls.length).toBeGreaterThan(0);
+    expect(runs.totals.find((t: { status: string }) => t.status === "COMPLETED").runs).toBeGreaterThan(0);
+    expect((await call("intruder", "GET", "/api/agent-runs")).json).toEqual({ totals: [], runs: [] });
+
+    expect((await call("viewer", "POST", "/api/reconcile")).status).toBe(403);
+    const run = (await call("operator", "POST", "/api/reconcile")).json;
+    const view = (await call("viewer", "GET", "/api/reconciliation")).json;
+    expect(view.runs[0]).toMatchObject({ id: run.id, ok: run.ok });
+    expect(view.providerTransfers.seen).toBeGreaterThan(0);
+    expect(view.ledger.length).toBeGreaterThan(0);
+    expect((await call("intruder", "GET", "/api/reconciliation")).json).toEqual({ runs: [], ledger: [], providerTransfers: { seen: 0, linkedToPayments: 0 } });
   });
 
   it("overview reports modes honestly", async () => {

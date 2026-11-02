@@ -4,12 +4,14 @@ import { BrowserRouter, NavLink, Route, Routes } from "react-router";
 import { Badge, Button, cx } from "./components/ui";
 import { getToken, setToken, useResource } from "./lib/api";
 import type { Me, Overview } from "./lib/types";
+import { AgentActivityPage } from "./pages/AgentActivity";
 import { ApprovalCenter } from "./pages/ApprovalCenter";
 import { AuditLog } from "./pages/AuditLog";
 import { DecisionReplay } from "./pages/DecisionReplay";
 import { IncidentList } from "./pages/IncidentList";
 import { IncidentWorkspace } from "./pages/IncidentWorkspace";
 import { OverviewPage } from "./pages/Overview";
+import { ReconciliationPage } from "./pages/Reconciliation";
 import { ScenarioLab } from "./pages/ScenarioLab";
 import { SignIn } from "./pages/SignIn";
 
@@ -18,6 +20,8 @@ const NAV = [
   { to: "/incidents", label: "Incidents" },
   { to: "/approvals", label: "Approval Center" },
   { to: "/lab", label: "Scenario Lab" },
+  { to: "/agent", label: "Agent Activity" },
+  { to: "/reconciliation", label: "Reconciliation" },
   { to: "/audit", label: "Audit log" },
 ];
 
@@ -90,6 +94,8 @@ function Shell({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
             <Route path="/incidents/:id/replay" element={<DecisionReplay />} />
             <Route path="/approvals" element={<ApprovalCenter me={me} />} />
             <Route path="/lab" element={<ScenarioLab me={me} />} />
+            <Route path="/agent" element={<AgentActivityPage />} />
+            <Route path="/reconciliation" element={<ReconciliationPage me={me} />} />
             <Route path="/audit" element={<AuditLog />} />
             <Route path="*" element={<p className="text-ink-dim">Page not found.</p>} />
           </Routes>

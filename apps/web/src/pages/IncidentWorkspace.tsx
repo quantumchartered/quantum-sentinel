@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { ConfirmDialog } from "../components/dialog";
+import { CostEstimateCard } from "../components/estimate";
 import { Badge, Button, Card, ErrorBox, EvidenceChip, KV, Loading, OriginBadge, RecBadge, StateBadge, cx } from "../components/ui";
 import { api, useAction, useResource } from "../lib/api";
 import { formatMicroUsd, formatMoney, formatTime, relativeTime, shortId } from "../lib/format";
@@ -374,6 +375,7 @@ export function IncidentWorkspace({ me }: { me: Me }) {
         </div>
         <div className="min-w-0 space-y-4">
           {inc.origin === "MOCK_SCENARIO" && (me.role === "OWNER" || me.role === "OPERATOR") && inc.state !== "RESOLVED" && <LabControls id={inc.id} />}
+          {d.estimate && <CostEstimateCard e={d.estimate} currency={d.obligation.currency} />}
           <Card title={`Evidence (${d.evidence.length})`}>
             {d.evidence.length === 0 ? <p className="text-sm text-ink-dim">No evidence attached.</p> : <ul className="space-y-3">{d.evidence.map((e) => <EvidenceItem key={e.id} e={e} />)}</ul>}
           </Card>

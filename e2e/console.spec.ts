@@ -92,12 +92,23 @@ test("Scenario A, operator: WAIT, blocked resend, bank return, REPLACE, AI propo
   await expect(page.getByText("Sending a replacement now could pay the supplier twice.").last()).toBeVisible();
   await shot(page, "06-workspace-wait-resend-blocked");
 
+  // Advisory estimate: labelled, and a forbidden replacement is never priced.
+  const estimate = page.locator("section", { has: page.getByRole("heading", { name: /Arrival and cost estimate/ }) });
+  await expect(estimate.getByText("ILLUSTRATIVE PRIORS")).toBeVisible();
+  await expect(estimate.getByText("Forbidden by policy")).toBeVisible();
+  await expect(estimate.getByText("Agrees with the policy recommendation.")).toBeVisible();
+  await estimate.scrollIntoViewIfNeeded();
+  await shot(page, "14-cost-estimate-wait");
+
   await page.getByRole("button", { name: "Original fails: bank return" }).click();
   await page.getByRole("button", { name: "Re-evaluate" }).click();
   await expect(page.getByText("REPLACE", { exact: true }).first()).toBeVisible();
   // The stale "resend blocked" panel from the WAIT decision is gone.
   await expect(page.getByText("Resend blocked by policy. No money moved.")).toHaveCount(0);
   await expect(page.getByText("Out of date: this analysis explains the earlier WAIT decision.")).toBeVisible();
+  await expect(estimate.getByText("Forbidden by policy")).toHaveCount(0);
+  await expect(estimate.getByRole("row", { name: /REPLACE.*lowest/ })).toBeVisible();
+  await expect(estimate.getByText("0%", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Run investigator" }).click();
   await expect(page.getByText("Changed from WAIT to REPLACE")).toBeVisible();
@@ -187,10 +198,34 @@ test("Audit log verifies the hash chain", async ({ page }) => {
   await expect(page.getByText(/Chain verified · \d+ entries/)).toBeVisible();
 });
 
+test("Agent Activity lists each investigator run with its tool calls and verifier result", async ({ page }) => {
+  await as(page, "VIEWER");
+  await page.goto("/agent");
+  await expect(page.getByRole("heading", { name: "Agent Activity" })).toBeVisible();
+  await expect(page.getByText(/Tool calls \(\d+\)/).first()).toBeVisible();
+  await expect(page.getByText(/Passed · \d+ warnings/).first()).toBeVisible();
+  await expect(page.getByText("mock-investigator").first()).toBeVisible();
+  await shot(page, "15-agent-activity");
+});
+
+test("Reconciliation: an operator runs it and the books check out", async ({ page }) => {
+  await as(page, "VIEWER");
+  await page.goto("/reconciliation");
+  await expect(page.getByRole("heading", { name: "Reconciliation" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run reconciliation" })).toHaveCount(0);
+
+  await as(page, "OPERATOR");
+  await page.goto("/reconciliation");
+  await page.getByRole("button", { name: "Run reconciliation" }).click();
+  await expect(page.getByText("No errors")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Owed to suppliers/ })).toBeVisible();
+  await shot(page, "16-reconciliation");
+});
+
 test("narrow screens (375px): no sideways scrolling on any page", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await as(page, "OWNER");
-  for (const path of ["/", "/incidents", `/incidents/${incidentA}`, `/incidents/${incidentA}/replay`, "/approvals", "/lab", "/audit"]) {
+  for (const path of ["/", "/incidents", `/incidents/${incidentA}`, `/incidents/${incidentA}/replay`, "/approvals", "/lab", "/agent", "/reconciliation", "/audit"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     await noHorizontalOverflow(page);
