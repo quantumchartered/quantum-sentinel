@@ -82,6 +82,7 @@ Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screen
 | `pnpm seed:demo` | Creates the demo tenant and one sign-in token per role |
 | `pnpm up` | `docker compose up --build`: Postgres + API + console on `:4000` |
 | `pnpm test:e2e` | Playwright browser tests against an isolated stack |
+| `pnpm eval` | Runs the 24-case evaluation matrix and writes [EVAL.md](EVAL.md); `--live` uses Claude |
 | `pnpm attacks` | Runs the 33-attack adversarial suite and writes [docs/ATTACKS.md](docs/ATTACKS.md); exits 1 if any attack succeeds |
 | `pnpm audit:verify` | Recomputes the audit hash chain; exits 1 if anything was altered |
 | `pnpm reconcile` | Checks ledger and provider-transfer invariants; reports, never repairs |
@@ -118,6 +119,6 @@ flowchart LR
 | AI investigator | Passing with a scripted MOCK model (honest, hallucinating, policy-overriding, prompt-injected); not yet run against the live API |
 | Playwright | Not implemented |
 | Attack scoreboard | [33 attacks run, 0 succeeded](docs/ATTACKS.md) (`pnpm attacks`; MOCK provider, scripted / Mock AI models, real Postgres and API) |
-| EVAL.md | Not run yet; no results claimed |
+| Evaluation | [24 / 24 cases pass](EVAL.md) (`pnpm eval`; MOCK provider, Mock AI; `pnpm eval --live` for Claude). Unsafe actions blocked 25/25 |
 | TLC model check | Not run; no proof claimed |
 | Demo video (< 5 min) | Planned for T5 |

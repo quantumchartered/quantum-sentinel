@@ -374,6 +374,6 @@ Actual outcomes, time-to-recommendation, and duplicates blocked are **not run** 
 
 **T4 Advanced (Nov 8–10), started early on Nov 2**
 - [x] Adversarial suite and scoreboard: 33 attacks, 0 succeeded (`pnpm attacks`, docs/ATTACKS.md)
-- [ ] Eval suite (`pnpm eval`, about 20 cases, EVAL.md)
+- [x] Eval suite: 24 cases, 24 pass (`pnpm eval`, EVAL.md); live-model mode `--live`
 - [ ] TLA+ model of the no-double-payment invariant (TLC in a container)
 - [ ] Arrival-probability and expected-cost estimate (labelled illustrative priors)
