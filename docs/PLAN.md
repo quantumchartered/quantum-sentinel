@@ -130,8 +130,8 @@ Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Ea
 - [x] Console: Overview, Incident Workspace, Decision Replay, Approval Center, Scenario Lab, Audit log
 - [x] Scenarios A, B, C run end to end in MOCK mode (API tests + browser check)
 - [ ] Scenario Lab SANDBOX mode (needs keys)
-- [ ] Automated Playwright suite (loading / empty / error / narrow screenshots)
-- [ ] One-command `docker compose up` for API + console
+- [x] Automated Playwright suite (loading / empty / error / narrow screenshots) - 11 tests
+- [x] One-command `docker compose up --build` for Postgres + API + console
 
 The original first slice (§1: USD LOCAL, no FX) stays. SWIFT and its two EUR 12.85 fees are out of scope unless the founder asks.
 

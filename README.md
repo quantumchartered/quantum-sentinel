@@ -4,6 +4,21 @@
 
 Quantum Sentinel is an entry in the Airwallex Agentic Banking Hackathon 2026 (Kit 3: Payment Ops Incident Commander). It investigates stuck or failed supplier payments on the **Airwallex sandbox** and recommends **WAIT**, **REPLACE** or **ESCALATE**. It changes its recommendation when new evidence arrives. Deterministic code and a bound human approval stand between the AI and any money movement, so the same obligation can never be paid twice.
 
+## Quick start (one command, no keys)
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:4000. Sign-in tokens for an owner, operator, approver and viewer are written to `.local/demo-tokens.json` on first start; they are git-ignored and never logged. Sign in with the operator token, open **Scenario Lab** and start Scenario A. Without keys, everything runs in clearly labelled MOCK mode: Sentinel simulates Airwallex and uses a rule-based "Mock AI", and nothing leaves your machine.
+
+| | |
+| --- | --- |
+| ![Incident Workspace: WAIT, resend blocked](docs/screenshots/06-workspace-wait-resend-blocked.png) | ![Decision Replay: WAIT to REPLACE](docs/screenshots/10-decision-replay.png) |
+| ![Approval Center: bound facts](docs/screenshots/08-approval-center.png) | ![Scenario C: escalated, payment blocked](docs/screenshots/11-scenario-c-escalated.png) |
+
+*Screenshots are captured by the end-to-end tests (`pnpm test:e2e`) in MOCK mode.*
+
 **Status: T3b operator console.** Built and tested with a MOCK Airwallex, a MOCK AI and a real local Postgres:
 - the safety core: duplicate-payment fence, incident state machine, bound approvals, executor, audit chain and ledger;
 - the Claude investigator: read-only tools, `propose_action`, grounding verifier;
@@ -31,7 +46,9 @@ pnpm install && pnpm check
 
 `pnpm check` runs lint, typecheck, the unit tests, and the integration tests. The integration tests start Sentinel's own Postgres with Docker Compose on `127.0.0.1:54329`. They never use port 5432.
 
-### Run the console (no keys needed: MOCK mode)
+`pnpm test:e2e` runs the browser tests. It uses your installed Google Chrome, with its own throwaway database and API on `:4100`.
+
+### Run the console for development (hot reload)
 
 1. Create a git-ignored `.env` from the template (PowerShell command below). Run `pnpm seed:demo` once. It prints a `SENTINEL_ORGANIZATION_ID` line; add it to `.env`.
 2. Run `pnpm seed:demo` again. It creates an owner, an operator, an approver and a viewer, and prints each sign-in token once.
@@ -63,11 +80,11 @@ Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screen
 | `pnpm api` | Operator API, webhook receiver, backup poller and executor worker on `:4000` |
 | `pnpm web` | Operator console on `:5173` (proxies `/api` to `:4000`) |
 | `pnpm seed:demo` | Creates the demo tenant and one sign-in token per role |
+| `pnpm up` | `docker compose up --build`: Postgres + API + console on `:4000` |
+| `pnpm test:e2e` | Playwright browser tests against an isolated stack |
 | `pnpm audit:verify` | Recomputes the audit hash chain; exits 1 if anything was altered |
 | `pnpm reconcile` | Checks ledger and provider-transfer invariants; reports, never repairs |
 | `pnpm investigate <incidentId>` | Runs one live Claude investigation (spends API credits; needs Anthropic credentials) |
-
-A single `docker compose up` that also runs the API and the web console arrives once those apps exist.
 
 ## Architecture (planned)
 
@@ -96,7 +113,7 @@ flowchart LR
 | Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK provider, Mock AI, real Postgres); not yet run on the sandbox |
 | Scenarios B (races) and C (fraud / reconciliation) | Run in the console and API tests (MOCK): B race gives 1 approval and 1 transfer; C escalates and blocks payment. Reconciliation mismatch is covered in DB tests (SYNTHETIC) |
 | Vitest / fast-check | 147 unit and 61 Postgres integration tests passing (`pnpm check`) |
-| Browser check | Console verified in a real browser (Scenario A, C, replay, approvals, error and empty states, no overflow at 375px). Automated Playwright suite not built yet |
+| Browser tests (Playwright) | 11 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, audit, no sideways scroll at 375px |
 | AI investigator | Passing with a scripted MOCK model (honest, hallucinating, policy-overriding, prompt-injected); not yet run against the live API |
 | Playwright | Not implemented |
 | Attack scoreboard, EVAL.md | Not run; no results claimed |

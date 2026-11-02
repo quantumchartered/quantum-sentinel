@@ -64,3 +64,7 @@ October 27, 2026. Design proposals awaiting the user's Phase 0 review; no implem
 | D53 | Approve executes immediately in the request; the background worker retries PENDING / expired UNCERTAIN executions | Fast feedback for the approver; crash-safe because the execution is committed before any provider call. |
 | D54 | Console: React 19 + Vite 8 + Tailwind 4 + Radix dialog/tooltip, no icon library | Minimal, accessible primitives; lucide-react was dropped rather than bypass pnpm's minimum-release-age policy. |
 | D55 | pnpm `allowBuilds` only for esbuild | pnpm 12 blocks dependency build scripts by default; esbuild's postinstall only selects its prebuilt binary. |
+| D56 | One image runs the API and serves the built console; Compose adds the `app` service with demo bootstrap | One command, one port (`:4000`), no separate web server; the API already serves `apps/web/dist`. |
+| D57 | Demo bootstrap writes role tokens to `.local/demo-tokens.json` (git-ignored, mode 600), never to logs | Directive: never log keys. A fresh clone still gets working sign-in without any manual seeding. |
+| D58 | Port guard refuses only `localhost:5432` | The guard protects the other project on the dev machine; inside Compose, Sentinel's Postgres is `postgres:5432`. |
+| D59 | Playwright uses the installed Chrome (`channel: "chrome"`) against an isolated `sentinel_e2e` DB and API on `:4100` | No browser download, never touches the developer's demo data; tests run serially because they tell one story. |

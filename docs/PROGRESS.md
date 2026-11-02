@@ -1,6 +1,6 @@
 # Progress and handoff
 
-Updated October 27, 2026 by Claude Code. Branch: `t3b/console`, stacked on `t3a/investigator`, `t2/safety-core`, `t1/integration` and `codex/phase-0-plan`. Nothing is merged to `main` yet.
+Updated November 2, 2026 by Claude Code. Branch: `t3b/console`, stacked on `t3a/investigator`, `t2/safety-core`, `t1/integration` and `codex/phase-0-plan`. Nothing is merged to `main` yet.
 
 ## Current stopping point
 
@@ -35,6 +35,8 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **HTTP API** (overview, incidents, replay, approvals, audit, actions, Lab) with role checks and tenant scoping | `apps/api/src/http/api.ts` | 11 API integration tests (auth, roles, Scenario A/B/C, four-eyes, reject, tenant isolation) |
 | **Scenario Lab** MOCK mode (MockProvider on the observation log, scenarios, events, race) and **Mock AI** | `apps/api/src/lab/*`, `apps/api/src/agent/mock-investigator.ts` | covered by API tests |
 | **Operator console**: Overview, Incidents, Incident Workspace, Decision Replay, Approval Center, Scenario Lab, Audit log | `apps/web` | Browser-verified (see below). No automated UI tests yet |
+| **One-command stack**: Dockerfile + Compose `app` service (API serves the built console on `:4000`), demo bootstrap writing tokens to `.local/demo-tokens.json` | `Dockerfile`, `docker-compose.yml`, `apps/api/src/bootstrap.ts` | Verified: `docker compose up --build` serves the console, deep links, 401 unauthenticated; fresh-tenant bootstrap gives 4 working role tokens |
+| **Playwright browser suite** (system Chrome, isolated `sentinel_e2e` DB, API on `:4100`) | `e2e/` | 11 tests, passed twice in a row; screenshots in `docs/screenshots/` |
 | CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
 
 Covered scenarios (MOCK provider, real Postgres):
@@ -54,6 +56,8 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 - Also checked: the not-found error state, the empty approval queue, and no horizontal overflow on 8 pages at 375px.
 - Two UX bugs were found and fixed during the check: stale action results after a decision change, and approval outcomes disappearing.
 - `pnpm test`: unit tests only.
+- `pnpm test:e2e`: 11 Playwright browser tests (needs Docker and Google Chrome). Last run: all passing.
+- `docker compose up --build` (or `pnpm up`): the whole app on http://localhost:4000.
 
 ## Founder steps (only you can do these)
 
@@ -67,10 +71,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 
 1. With keys: run the sandbox feasibility sequence. Wire `airwallexExecutionProvider` into a sandbox Scenario A run.
 2. With an Anthropic key (ANTHROPIC_API_KEY in `.env`, or `ant auth login`): `pnpm investigate <incidentId>` on a local incident. Tune the prompt only if the verifier rejects real reports.
-3. Without keys, in the T3b/T4 remainder:
-   - an automated Playwright smoke suite (use system Chrome via `channel: "chrome"` to avoid a browser download);
-   - a one-command `docker compose up` for API + console;
-   - then T4: the adversarial suite and scoreboard, the eval suite, TLA+.
+3. Without keys: T4, in order. First the adversarial attack suite with a scoreboard (attacks run / succeeded = 0). Then the eval suite (`pnpm eval`, about 20 cases, results in EVAL.md). Then the TLA+ model of the no-double-payment invariant, then the arrival-probability / expected-cost estimate.
 
 ## Known gaps and shortcuts
 
@@ -81,9 +82,9 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 - Webhooks and the backup poller are wired to one tenant (`SENTINEL_ORGANIZATION_ID`). The API itself is tenant-scoped by user. Per-tenant provider connections and webhook secrets are not built.
 - Scenario Lab SANDBOX mode is not built (needs keys). In the UI it shows as "needs keys".
 - The MockProvider keeps the simulated wallet in memory. It resets per scenario and on API restart.
-- The console has no automated tests yet. It was verified manually in the browser.
 - The audit chain detects edits, deletions and reordering. On its own it does not detect truncation of the newest entries, or a privileged rewrite of the whole chain. Exported checkpoints are planned (T5 security notes).
-- `docker compose up` runs only Postgres today. API and console start with `pnpm api` / `pnpm web`.
+- The Docker image runs TypeScript through `tsx` (no compile step). Fine for a local demo; not tuned for production.
+- Playwright needs Google Chrome installed (it uses `channel: "chrome"`). On a machine without Chrome, run `npx playwright install chromium` and drop the channel.
 - The investigator has only been exercised with a scripted MOCK model. Real-model behaviour (citation discipline, verifier pass rate, cost per run) is unmeasured.
 - Supplier-text screening is pattern-based. It is broad on purpose, but it can be evaded by paraphrase, so the beneficiary-hash check at execution remains the hard stop.
 - No prompt caching yet. The system prompt and tools are stable, so adding `cache_control` is a cheap later win.
