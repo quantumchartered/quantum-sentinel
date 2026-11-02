@@ -49,7 +49,7 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck (API + web), 147 unit tests, 122 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck (API + web), 169 unit tests, 122 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
 - Console run: see README "Run the console". The preview launch config is in `.claude/launch.json` (`api`, `web`).
 
 Browser check (Oct 27, built-in browser pane, MOCK mode):

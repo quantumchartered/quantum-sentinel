@@ -114,7 +114,7 @@ flowchart LR
 | --- | --- |
 | Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK provider, Mock AI, real Postgres); not yet run on the sandbox |
 | Scenarios B (races) and C (fraud / reconciliation) | Run in the console and API tests (MOCK): B race gives 1 approval and 1 transfer; C escalates and blocks payment. Reconciliation mismatch is covered in DB tests (SYNTHETIC) |
-| Vitest / fast-check | 147 unit and 61 Postgres integration tests passing (`pnpm check`) |
+| Vitest / fast-check | 169 unit and 122 Postgres integration tests passing (`pnpm check`) |
 | Browser tests (Playwright) | 11 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, audit, no sideways scroll at 375px |
 | AI investigator | Passing with a scripted MOCK model (honest, hallucinating, policy-overriding, prompt-injected); not yet run against the live API |
 | Playwright | Not implemented |
