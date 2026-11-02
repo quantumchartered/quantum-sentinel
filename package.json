@@ -25,7 +25,8 @@
     "build:web": "pnpm --filter @sentinel/web build",
     "up": "docker compose up --build",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
-    "attacks": "pnpm db:up && pnpm --silent --filter @sentinel/api exec tsx src/cli/attacks.ts"
+    "attacks": "pnpm db:up && pnpm --silent --filter @sentinel/api exec tsx src/cli/attacks.ts",
+    "eval": "pnpm db:up && pnpm --silent --filter @sentinel/api exec tsx src/cli/eval.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
