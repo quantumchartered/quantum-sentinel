@@ -35,9 +35,24 @@ describe("supplier text screening", () => {
   it.each([
     "Hi, the invoice INV-1042 deadline was Oct 25 and we have not received the funds yet.",
     "Can you check the status of the transfer? Our bank shows nothing.",
-    "Thanks, the payment arrived today.",
+    "The payment has not arrived. Please check.",
+    "We haven't received the money and nothing has landed in our account.",
+    "Hello, the due date for INV-1042 (USD 25,000.00) was two days ago and we have not received the funds. Could you check?",
   ])("leaves an ordinary chaser unflagged: %s", (t) => {
     expect(flags(t)).toEqual([]);
+  });
+
+  it.each([
+    "Thanks, the payment arrived today.",
+    "Good news: we have received the payment for INV-1042.",
+    "Update - the funds came through this morning, sorry for the confusion.",
+    "Please ignore my last email. Thank you for the transfer!",
+  ])("a supplier receipt claim raises EVIDENCE_CONFLICT: %s", (t) => {
+    expect(flags(t)).toContain("EVIDENCE_CONFLICT");
+  });
+
+  it("a negated claim in one sentence does not hide a receipt claim in another", () => {
+    expect(flags("We had not received it on Monday. Today the payment arrived.")).toContain("EVIDENCE_CONFLICT");
   });
 
   it("is not fooled by unicode look-alikes or extra whitespace", () => {

@@ -15,13 +15,15 @@ const EXACT: Record<string, string> = {
   "risk:BANK_DETAIL_CHANGE_REQUEST": "The supplier asked to pay a different bank account.",
   "risk:PROMPT_INJECTION_SUSPECTED": "A supplier message contains instructions aimed at the system.",
   "risk:BENEFICIARY_MISMATCH": "The beneficiary's bank details differ from what was approved.",
-  "risk:EVIDENCE_CONFLICT": "Evidence sources contradict each other.",
+  "risk:EVIDENCE_CONFLICT": "Evidence sources contradict each other (for example the supplier says the money arrived).",
+  "original:no_provider_record": "Sentinel holds no provider record of the original transfer, so it cannot tell whether money moved.",
   four_eyes_approver_is_proposer: "You proposed this payment, so someone else must approve it.",
 };
 
 export function explainReason(code: string): string {
   if (EXACT[code]) return EXACT[code]!;
   if (code.startsWith("original:in_flight:")) return `The original transfer is still ${code.split(":")[2]} at the provider.`;
+  if (code.startsWith("original:failure_requires_review:")) return `The original failed with ${code.split(":")[2]?.replaceAll("_", " ").toLowerCase()}; re-sending to the same details is not safe, so a person must review.`;
   if (code.startsWith("original:confirmed_failed:")) return `The original failed (${code.split(":")[2]?.replaceAll("_", " ").toLowerCase()}) and was cancelled.`;
   const insufficient = /^balance:insufficient:need_(\d+)_have_(\d+)$/.exec(code);
   if (insufficient) return `The wallet does not cover the amount plus fees (needs ${insufficient[1]}, has ${insufficient[2]} minor units).`;

@@ -30,11 +30,14 @@ const REASON_TEXT: Record<string, string> = {
   "balance:unavailable": "the wallet balance could not be read",
   "risk:BANK_DETAIL_CHANGE_REQUEST": "the supplier asked to pay a different bank account",
   "risk:PROMPT_INJECTION_SUSPECTED": "a supplier message contains instructions aimed at the system",
+  "risk:EVIDENCE_CONFLICT": "a supplier message contradicts the provider record",
+  "original:no_provider_record": "there is no provider record of the original transfer",
 };
 
 function plain(reason: string): string {
   if (REASON_TEXT[reason]) return REASON_TEXT[reason]!;
   if (reason.startsWith("original:in_flight:")) return `the original transfer is still ${reason.split(":")[2]} at the provider`;
+  if (reason.startsWith("original:failure_requires_review:")) return `the original failed with ${reason.split(":")[2]}, which needs a person before any resend`;
   if (reason.startsWith("original:confirmed_failed:")) return `the original transfer failed (${reason.split(":")[2]}) and was cancelled`;
   if (reason.startsWith("balance:insufficient")) return "the wallet does not cover the amount plus fees";
   return reason;

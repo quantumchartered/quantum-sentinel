@@ -26,6 +26,13 @@ const INJECTION: RegExp[] = [
   /<\/?(system|instructions?|tool|assistant)[^>]*>/i,
 ];
 
+const RECEIPT: RegExp[] = [
+  /\b(we|i)\s*(have|'ve|did)?\s*(now|just|already|finally)?\s*(received|got)\s+(it|the (payment|funds|money|transfer))\b/i,
+  /\b(payment|funds|money|transfer|remittance)\b.{0,30}\b(has arrived|arrived|has landed|landed|came through|has been received|was received|reached us|is in our account)\b/i,
+  /\bthank(s| you)? for (the |your )?(payment|transfer)\b/i,
+];
+const NEGATION = /\b(not|never|no|haven't|hasn't|didn't|isn't|wasn't|nothing|yet to)\b|n't\b/i;
+
 export interface TextSignals {
   flags: RiskFlag[];
   matches: { flag: RiskFlag; excerpt: string }[];
@@ -45,5 +52,15 @@ export function detectSupplierTextSignals(text: string): TextSignals {
   };
   scan(BANK_CHANGE, "BANK_DETAIL_CHANGE_REQUEST");
   scan(INJECTION, "PROMPT_INJECTION_SUSPECTED");
+  // A supplier saying the money ARRIVED contradicts any replacement: a person must reconcile first.
+  // Checked per sentence so "we have not received" never counts as a receipt claim.
+  for (const sentence of normalized.split(/(?<=[.!?])\s+/)) {
+    if (NEGATION.test(sentence)) continue;
+    const m = RECEIPT.map((p) => p.exec(sentence)).find(Boolean);
+    if (m) {
+      matches.push({ flag: "EVIDENCE_CONFLICT", excerpt: m[0].slice(0, 120) });
+      break;
+    }
+  }
   return { flags: [...new Set(matches.map((m) => m.flag))], matches };
 }

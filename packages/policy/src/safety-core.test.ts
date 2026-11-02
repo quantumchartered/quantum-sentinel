@@ -303,3 +303,33 @@ describe("canonical JSON", () => {
     expect(evidenceSetHash(a)).not.toBe(evidenceSetHash([{ id: "1", contentHash: "x" }]));
   });
 });
+
+describe("failure-type classes and missing records (policy-2026-11-02.1)", () => {
+  const failedWith = (type: string): Finality => ({
+    kind: "CONFIRMED_FAILED",
+    failure: { code: null, message: null, type, reasonCodes: [], observedWithStatus: "FAILED", firstSeenAt: "2026-11-02T00:00:00Z", source: "webhook" },
+  });
+
+  it.each(["BENEFICIARY_BANK_RETURNED", "CHANNEL_TIMEOUT", "SYSTEM_ERROR", "INSUFFICIENT_FUNDS"])("%s can be replaced", (t) => {
+    expect(decide({ ...base, original: failedWith(t) }).recommendation).toBe("REPLACE");
+  });
+
+  it.each([
+    "ACCOUNT_CLOSED",
+    "INVALID_ACCOUNT_NAME_OR_NUMBER",
+    "BENEFICIARY_NAME_MISMATCH",
+    "RECALL_REQUESTED",
+    "CLIENT_REQUESTED",
+    "DUPLICATION_RETURN",
+    "TM_SUSPENDED",
+    "TRANSACTION_AMOUNT_NOT_COVERING_FEE",
+    "OTHER",
+    "SOMETHING_UNDOCUMENTED",
+  ])("%s escalates instead of re-sending to the same details", (t) => {
+    expect(decide({ ...base, original: failedWith(t) })).toMatchObject({ recommendation: "ESCALATE", reasons: [`original:failure_requires_review:${t}`] });
+  });
+
+  it("no provider record at all escalates rather than waiting", () => {
+    expect(decide({ ...base, original: { kind: "IN_FLIGHT", status: null } })).toMatchObject({ recommendation: "ESCALATE", reasons: ["original:no_provider_record"] });
+  });
+});
