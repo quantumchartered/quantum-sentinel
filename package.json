@@ -23,10 +23,12 @@
     "seed:demo": "pnpm --silent --filter @sentinel/api exec tsx --env-file-if-exists=../../.env src/cli/seed.ts",
     "web": "pnpm --filter @sentinel/web dev",
     "build:web": "pnpm --filter @sentinel/web build",
-    "up": "docker compose up --build"
+    "up": "docker compose up --build",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
     "@types/node": "24.19.2",
     "eslint": "10.13.0",
     "fast-check": "4.10.2",

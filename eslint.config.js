@@ -16,4 +16,9 @@ export default defineConfig(
       "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^_", argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" }],
     },
   },
+  {
+    // Plain Node scripts (e.g. the e2e server launcher).
+    files: ["**/*.mjs"],
+    languageOptions: { globals: { process: "readonly", URL: "readonly", console: "readonly" } },
+  },
 );

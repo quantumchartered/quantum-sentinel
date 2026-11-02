@@ -35,7 +35,7 @@ export const shortId = (id: string, n = 8) => (id.includes(":") ? `${id.split(":
 
 export function actorLabel(actor: string): string {
   if (actor.startsWith("agent:")) return "AI investigator";
-  if (actor.startsWith("user:")) return "Operator";
+  if (actor.startsWith("user:")) return "Person";
   if (actor.startsWith("lab-racer")) return "Lab racer";
   return actor.replace(/-/g, " ");
 }

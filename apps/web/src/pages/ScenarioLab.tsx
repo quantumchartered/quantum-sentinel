@@ -49,36 +49,35 @@ function RaceRunner({ incidents }: { incidents: IncidentListItem[] }) {
       {ready.length === 0 ? (
         <p className="text-sm text-ink-dim">Needs a mock incident awaiting approval. Start Scenario B and propose the replacement first.</p>
       ) : (
-        <>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-sm text-ink-dim">
-              Incident
-              <select value={chosen} onChange={(e) => setTarget(e.target.value)} className="mt-1 block rounded-md border border-line-strong bg-bg px-2 py-1.5 text-sm text-ink">
-                {ready.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Button tone="primary" onClick={() => race.run(chosen)} disabled={race.pending || !chosen}>
-              {race.pending ? "Racing…" : "Fire 10 approvals + 10 executors at once"}
-            </Button>
-          </div>
-          {race.result && (
-            <div className="mt-4">
-              <KV
-                items={[
-                  ["Approval attempts", race.result.approvalAttempts],
-                  ["Approvals granted", <span className="font-semibold text-ok">{race.result.approvalsGranted}</span>],
-                  ["Execution attempts", race.result.executionAttempts],
-                  ["Transfers sent to the provider", <span className="font-semibold text-ok">{race.result.providerTransfersCreated}</span>],
-                  ["Replacement payments in the books", race.result.replacementPayments],
-                ]}
-              />
-            </div>
-          )}
-        </>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-sm text-ink-dim">
+            Incident
+            <select value={chosen} onChange={(e) => setTarget(e.target.value)} className="mt-1 block rounded-md border border-line-strong bg-bg px-2 py-1.5 text-sm text-ink">
+              {ready.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button tone="primary" onClick={() => race.run(chosen)} disabled={race.pending || !chosen}>
+            {race.pending ? "Racing…" : "Fire 10 approvals + 10 executors at once"}
+          </Button>
+        </div>
+      )}
+      {/* The last result stays visible even after the raced incident leaves the "ready" list. */}
+      {race.result && (
+        <div className="mt-4" role="status" aria-label="Race result">
+          <KV
+            items={[
+              ["Approval attempts", race.result.approvalAttempts],
+              ["Approvals granted", <span className="font-semibold text-ok">{race.result.approvalsGranted}</span>],
+              ["Execution attempts", race.result.executionAttempts],
+              ["Transfers sent to the provider", <span className="font-semibold text-ok">{race.result.providerTransfersCreated}</span>],
+              ["Replacement payments in the books", race.result.replacementPayments],
+            ]}
+          />
+        </div>
       )}
       <div className="mt-2">
         <ErrorBox error={race.error} title="Race refused" />

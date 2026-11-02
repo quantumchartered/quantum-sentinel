@@ -12,3 +12,8 @@ Thumbs.db
 .local/
 artifacts/private/
 *.tsbuildinfo
+
+# End-to-end test artefacts
+test-results/
+playwright-report/
+e2e/.tokens.json

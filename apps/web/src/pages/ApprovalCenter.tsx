@@ -105,7 +105,7 @@ function ApprovalCard({ item, me, onOutcome }: { item: ApprovalItem; me: Me; onO
         </div>
       )}
       {!isApprover && <p className="mt-4 text-sm text-ink-dim">Only approvers can sign. You are signed in as {me.role.toLowerCase()}.</p>}
-      {result && <Outcome r={result} />}
+      {result && <p className="mt-3 text-sm text-ink-dim">Decision recorded. See “Just decided” above.</p>}
       <div className="mt-3">
         <ErrorBox error={error} title="Could not complete" />
       </div>
