@@ -167,6 +167,18 @@ test("Decision Replay shows what was known when WAIT became REPLACE", async ({ p
   await expect(position).not.toHaveText(before);
 });
 
+test("a late return of the paid replacement reopens the resolved incident and escalates it", async ({ page }) => {
+  await as(page, "OPERATOR");
+  await page.goto(`/incidents/${incidentA}`);
+  await page.getByRole("button", { name: "Paid replacement returned later" }).click();
+  await expect(page.getByText("Escalated to a person").first()).toBeVisible();
+  await expect(page.getByText(/Escalated: Reopened after resolution\. The replacement payment that settled this invoice failed after PAID/)).toBeVisible();
+  await expect(page.getByText("Earlier policy decision: REPLACE")).toBeVisible();
+  await shot(page, "17-reopened-after-paid");
+  await page.goto(`/incidents/${incidentA}/replay`);
+  await expect(page.getByRole("button", { name: /Reopened after resolution/ })).toBeVisible();
+});
+
 test("Scenario C: the fraud email escalates and payment is blocked", async ({ page }) => {
   await as(page, "OPERATOR");
   await page.goto("/lab");

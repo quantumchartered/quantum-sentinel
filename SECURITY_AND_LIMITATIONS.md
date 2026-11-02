@@ -16,6 +16,7 @@ Quantum Sentinel is a hackathon build on the **Airwallex sandbox**. It is not pr
 | Everything is re-checked under lock right before the provider call (finality, balance with fee and reserve, beneficiary details, approval) | `executeReplacement` | Integration tests |
 | Supplier text is untrusted data. Bank-detail change requests and prompt injection are detected in code and always escalate | `packages/policy/src/text-signals.ts` | 16 unit tests, attack suite |
 | Fail closed: a decoder, balance, policy or model error leads to WAIT or ESCALATE, never a payment | throughout | Tests with failing or stalled dependencies |
+| A resolved incident reopens and escalates if PAID later fails or the replaced payment turns out to have been PAID | `recheckResolvedIncident` in `packages/db/src/execution.ts` | API tests (mutation-checked) and a browser test |
 
 The arrival and cost estimate (`packages/policy/src/estimate.ts`) is **advisory**. It is computed from illustrative priors, never feeds `decide()`, and never prices a replacement that policy forbids.
 
@@ -40,7 +41,7 @@ The arrival and cost estimate (`packages/policy/src/estimate.ts`) is **advisory*
 **Safety-model assumptions** (see [spec/README.md](spec/README.md))
 - A transfer Airwallex reports FAILED never delivers money later; Airwallex de-duplicates `request_id`; a definite rejection means no transfer exists; lookup by `request_id` sees every transfer; nobody pays the supplier outside Sentinel.
 - The TLA+ model is checked only up to 3 workers, 3 replacements and 4 claims, makes no liveness claim, and its match to the code is by review and replay tests, not a refinement proof.
-- PAID is treated as settled for the demo, although Airwallex documents that PAID can still fail. A late failure after resolution needs a REOPEN path that is not wired yet.
+- PAID is treated as settled when an incident resolves, although Airwallex documents that PAID can still fail. Resolved incidents are therefore re-checked (worker tick and every reconciliation run): a late failure of the settling payment, a PAID on the replaced payment, or a history conflict reopens the incident and escalates it to a person. The failed payment keeps blocking the invoice, nothing is re-sent automatically, and the ledger books the return. Detection is only as fast as the webhook or the next poll.
 - The beneficiary hash uses `bank_details`, a shape not yet confirmed in the sandbox. If it is missing, execution is blocked.
 
 **Product gaps**

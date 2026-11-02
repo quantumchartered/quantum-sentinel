@@ -15,6 +15,7 @@ import {
   executeReplacement,
   getIncident,
   ingestSupplierMessage,
+  recheckResolvedIncidents,
   loadAuditChain,
   lockIncidentWithObligation,
   paymentsForObligation,
@@ -443,7 +444,12 @@ export function registerApi(app: FastifyInstance, deps: ApiDeps): void {
     return r;
   });
 
-  app.post("/api/reconcile", { preHandler: guard(OPERATE) }, async (req) => runReconciliation(db, org(req)));
+  app.post("/api/reconcile", { preHandler: guard(OPERATE) }, async (req) => {
+    // A late failure of a settled payment reopens its incident (escalated to a person) before the books are checked.
+    const reopened = await recheckResolvedIncidents(db, org(req), actorOf(u(req)));
+    for (const r of reopened) await syncLedgerForObligation(db, org(req), (await getIncident(db, org(req), r.incidentId)).obligationId);
+    return { ...(await runReconciliation(db, org(req))), reopened };
+  });
 
   // ---------- approver actions ----------
 

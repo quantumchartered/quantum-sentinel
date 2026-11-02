@@ -133,8 +133,9 @@ The model reads and explains. Code decides what is allowed, a person approves, a
 | --- | --- |
 | Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK provider, Mock AI, real Postgres); not yet run on the sandbox |
 | Scenarios B (races) and C (fraud / reconciliation) | Run in the console and API tests (MOCK): B race gives 1 approval and 1 transfer; C escalates and blocks payment. Reconciliation mismatch is covered in DB tests (SYNTHETIC) |
-| Vitest / fast-check | 183 unit and 127 Postgres integration tests passing (`pnpm check`) |
-| Browser tests (Playwright) | 13 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, cost estimate, Agent Activity, Reconciliation, audit, no sideways scroll at 375px |
+| Vitest / fast-check | 183 unit and 129 Postgres integration tests passing (`pnpm check`) |
+| Browser tests (Playwright) | 14 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, cost estimate, reopen after a late return, Agent Activity, Reconciliation, audit, no sideways scroll at 375px |
+| PAID can still fail | A resolved incident is re-checked; a late return of the settling payment reopens it and escalates to a person, with no automatic re-send (API and browser tests) |
 | Arrival and cost estimate | Advisory, from labelled illustrative priors (`packages/policy/src/estimate.ts`): Scenario A shows WAIT cheapest while the original is in flight and REPLACE cheapest after the bank return; a replacement policy forbids is never priced |
 | AI investigator | Passing with a scripted MOCK model (honest, hallucinating, policy-overriding, prompt-injected); not yet run against the live API |
 | Attack scoreboard | [33 attacks run, 0 succeeded](docs/ATTACKS.md) (`pnpm attacks`; MOCK provider, scripted / Mock AI models, real Postgres and API) |

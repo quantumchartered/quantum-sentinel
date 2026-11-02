@@ -34,7 +34,7 @@ import {
   otherPayments,
   paymentsForObligation,
 } from "./incidents.js";
-import { approvals, executions, organizations, payments, proposedActions } from "./schema.js";
+import { approvals, executions, incidents, organizations, payments, proposedActions } from "./schema.js";
 
 /** Everything the executor needs from the provider. AirwallexClient satisfies it. */
 export interface ExecutionProvider {
@@ -405,4 +405,47 @@ export async function tryResolveIncident(db: Db, organizationId: string, inciden
     );
     return r;
   });
+}
+
+/**
+ * A resolved incident is only as good as the facts it was resolved on. Airwallex
+ * documents that PAID can still fail, and late evidence can contradict history.
+ * Re-check a RESOLVED incident: if the payment that settled it has since failed,
+ * the replaced payment now shows it was PAID (the replacement was justified only
+ * because it never was), or any history conflicts, reopen it and
+ * escalate to a person. This never proposes or sends anything, and the failed
+ * payment keeps blocking the invoice until a person decides.
+ */
+export async function recheckResolvedIncident(db: Db, organizationId: string, incidentId: string, actor = "reconciler"): Promise<{ reopened: boolean; reasons: string[] }> {
+  return db.transaction(async (tx) => {
+    const { obligation, incident } = await lockIncidentWithObligation(tx, organizationId, incidentId);
+    if (incident.state !== "RESOLVED") return { reopened: false, reasons: [] };
+    const reasons: string[] = [];
+    for (const p of await paymentsForObligation(tx, organizationId, obligation.id)) {
+      if (!p.providerTransferId) continue;
+      const f = classifyFinality(await loadTransferHistory(tx, organizationId, p.providerTransferId));
+      const settling = p.role === incident.settledBy;
+      if (settling && f.kind === "FAILED_AFTER_PAID") reasons.push(`settled_payment_failed_after_paid:${p.role}:${f.failure?.type ?? "type_unknown"}`);
+      if (!settling && f.kind === "PAID_NOT_FINAL") reasons.push(`second_payment_paid:${p.role}`);
+      if (!settling && f.kind === "FAILED_AFTER_PAID") reasons.push(`unsettled_payment_was_paid:${p.role}`);
+      if (f.kind === "CONFLICT") reasons.push(`payment_history_conflict:${p.role}`);
+    }
+    if (reasons.length === 0) return { reopened: false, reasons };
+    const reason = `reopened: ${reasons.join(", ")}`;
+    const reopened = await applyTransition(tx, organizationId, incident, { type: "REOPEN", reason }, actor);
+    await applyTransition(tx, organizationId, reopened, { type: "ESCALATE", reason }, actor);
+    await appendAudit(tx, organizationId, { actor, eventType: "incident.reopened", payload: { incidentId, obligationId: obligation.id, reasons } });
+    return { reopened: true, reasons };
+  });
+}
+
+/** Re-check every RESOLVED incident of an organization (worker tick and reconciliation). */
+export async function recheckResolvedIncidents(db: Db, organizationId: string, actor = "reconciler"): Promise<{ incidentId: string; reasons: string[] }[]> {
+  const resolved = await db.select({ id: incidents.id }).from(incidents).where(and(eq(incidents.organizationId, organizationId), eq(incidents.state, "RESOLVED")));
+  const out: { incidentId: string; reasons: string[] }[] = [];
+  for (const { id } of resolved) {
+    const r = await recheckResolvedIncident(db, organizationId, id, actor);
+    if (r.reopened) out.push({ incidentId: id, reasons: r.reasons });
+  }
+  return out;
 }

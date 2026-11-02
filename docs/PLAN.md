@@ -381,4 +381,6 @@ Actual outcomes, time-to-recommendation, and duplicates blocked are **not run** 
 
 **T5 Ship (Nov 10–12), started early on Nov 2**
 - [x] `SECURITY_AND_LIMITATIONS.md`, as-built architecture diagram in the README
-- [ ] Clean-install rehearsal, demo recording (founder), REOPEN path for a failure after PAID
+- [x] Clean-install rehearsal (fresh clone, frozen install, `docker compose up --build`, Scenario A end to end)
+- [x] REOPEN path: a late failure after PAID reopens a resolved incident and escalates (D71)
+- [ ] Demo recording (founder), fees on the ledger

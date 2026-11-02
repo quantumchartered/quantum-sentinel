@@ -85,6 +85,8 @@ function describe(a: ReplayData["audit"][number]): Omit<Frame, "key" | "at" | "o
       return { title: "Provider rejected the replacement", tone: "danger", key_moment: true, actor: a.actor };
     case "payment.failure_confirmed":
       return { title: `Failure confirmed: ${P(p, "failureType")}`, detail: "Payment lock released for this invoice.", tone: "accent", key_moment: true, actor: a.actor };
+    case "incident.reopened":
+      return { title: "Reopened after resolution", detail: ((p.reasons as string[]) ?? []).map(explainReason).join(" "), tone: "danger", key_moment: true, actor: a.actor };
     case "lab.event":
       return { title: `Simulated: ${P(p, "event").replaceAll("_", " ").toLowerCase()}`, tone: "mock", key_moment: true, actor: a.actor };
     default:

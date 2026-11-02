@@ -1,7 +1,17 @@
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { AirwallexClient } from "@sentinel/airwallex";
-import { type ApprovalKeys, airwallexExecutionProvider, createDb, executeReplacement, migrate, schema } from "@sentinel/db";
+import {
+  type ApprovalKeys,
+  airwallexExecutionProvider,
+  createDb,
+  executeReplacement,
+  getIncident,
+  migrate,
+  recheckResolvedIncidents,
+  schema,
+  syncLedgerForObligation,
+} from "@sentinel/db";
 import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { MOCK_MODEL_ID, MockInvestigatorModel } from "./agent/mock-investigator.js";
 import { DEFAULT_MODEL, anthropicModelClient } from "./agent/model.js";
@@ -80,6 +90,14 @@ const timer = setInterval(async () => {
       if (!provider) continue;
       const r = await executeReplacement(db, provider, i.organizationId, e.id, { keys });
       app.log.info({ executionId: e.id, status: r.status }, "executor");
+    }
+    // 3. A resolved incident whose settling payment later failed (PAID can still fail) reopens and escalates.
+    const orgs = await db.selectDistinct({ id: schema.incidents.organizationId }).from(schema.incidents).where(eq(schema.incidents.state, "RESOLVED"));
+    for (const { id: org } of orgs) {
+      for (const r of await recheckResolvedIncidents(db, org)) {
+        await syncLedgerForObligation(db, org, (await getIncident(db, org, r.incidentId)).obligationId);
+        app.log.warn(r, "resolved incident reopened and escalated");
+      }
     }
   } catch (err) {
     app.log.error(err, "worker tick failed");

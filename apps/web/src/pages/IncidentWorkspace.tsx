@@ -29,6 +29,9 @@ function Recommendation({ d, me, onDone }: { d: IncidentDetail; me: Me; onDone: 
   const resolve = useAction(useCallback(() => api<{ resolved: boolean; reason?: string }>(`/api/incidents/${id}/resolve`, { method: "POST" }), [id]));
   const anyError = evaluate.error ?? investigate.error ?? resend.error ?? propose.error ?? resolve.error;
   const live = !["RESOLVED", "ESCALATED"].includes(inc.state);
+  // A person's escalation, or a reopen after resolution, overrides the last policy decision on screen.
+  const shown = inc.state === "ESCALATED" ? "ESCALATE" : decision?.recommendation;
+  const superseded = !!decision && shown !== decision.recommendation;
 
   // Results of earlier clicks describe an earlier decision; drop them when the decision changes.
   const decisionId = decision?.id;
@@ -47,14 +50,15 @@ function Recommendation({ d, me, onDone }: { d: IncidentDetail; me: Me; onDone: 
             <p
               className={cx(
                 "text-3xl font-semibold tracking-tight",
-                decision.recommendation === "WAIT" ? "text-warn" : decision.recommendation === "REPLACE" ? "text-accent-strong" : "text-danger",
+                shown === "WAIT" ? "text-warn" : shown === "REPLACE" ? "text-accent-strong" : "text-danger",
               )}
             >
-              {decision.recommendation}
+              {shown}
             </p>
-            <p className="mt-1 text-xs text-ink-faint">since {formatTime(decision.decidedAt)}</p>
+            <p className="mt-1 text-xs text-ink-faint">{superseded ? `since ${formatTime(inc.updatedAt)}` : `since ${formatTime(decision.decidedAt)}`}</p>
           </div>
-          <ul className="flex-1 space-y-1.5 text-sm text-ink">
+          <ul className={cx("flex-1 space-y-1.5 text-sm", superseded ? "text-ink-dim" : "text-ink")}>
+            {superseded && <li className="text-xs uppercase tracking-wide text-ink-faint">Earlier policy decision: {decision.recommendation}</li>}
             {decision.reasons.map((r) => (
               <li key={r} className="flex gap-2">
                 <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-ink-faint" />
@@ -71,7 +75,7 @@ function Recommendation({ d, me, onDone }: { d: IncidentDetail; me: Me; onDone: 
           <p className="mt-0.5 text-danger/90">{inc.riskFlags.map((f) => explainReason(`risk:${f}`)).join(" ")}</p>
         </div>
       )}
-      {inc.state === "ESCALATED" && inc.escalationReason && <p className="mt-3 text-sm text-ink-dim">Escalated: {inc.escalationReason}</p>}
+      {inc.state === "ESCALATED" && inc.escalationReason && <p className="mt-3 text-sm text-ink-dim">Escalated: {explainReason(inc.escalationReason)}</p>}
       {inc.state === "RESOLVED" && (
         <p className="mt-3 text-sm text-ok">
           Resolved. Settled by the {inc.settledBy?.toLowerCase()} payment. Original transfer: {inc.originalFate}.
@@ -308,13 +312,19 @@ const LAB_BUTTONS: [string, string][] = [
   ["BENEFICIARY_CHANGED_AT_PROVIDER", "Beneficiary changed at provider"],
 ];
 
-function LabControls({ id }: { id: string }) {
+const LAB_BUTTONS_RESOLVED: [string, string][] = [["REPLACEMENT_RETURNED_AFTER_PAID", "Paid replacement returned later"]];
+
+function LabControls({ id, resolved }: { id: string; resolved: boolean }) {
   const ev = useAction(useCallback((event: string) => api(`/api/lab/incidents/${id}/events`, { method: "POST", body: { event } }), [id]));
   return (
     <Card title={<span className="flex items-center gap-2">Scenario Lab controls <Badge tone="mock">Simulated</Badge></span>}>
-      <p className="mb-3 text-sm text-ink-dim">Inject new information as the MOCK provider. Then re-evaluate to see the decision change.</p>
+      <p className="mb-3 text-sm text-ink-dim">
+        {resolved
+          ? "Resolved incidents are re-checked: PAID can still fail. Simulate a late return of the payment that settled this invoice."
+          : "Inject new information as the MOCK provider. Then re-evaluate to see the decision change."}
+      </p>
       <div className="flex flex-wrap gap-2">
-        {LAB_BUTTONS.map(([event, label]) => (
+        {(resolved ? LAB_BUTTONS_RESOLVED : LAB_BUTTONS).map(([event, label]) => (
           <Button key={event} onClick={() => ev.run(event)} disabled={ev.pending}>
             {label}
           </Button>
@@ -374,7 +384,9 @@ export function IncidentWorkspace({ me }: { me: Me }) {
           </Card>
         </div>
         <div className="min-w-0 space-y-4">
-          {inc.origin === "MOCK_SCENARIO" && (me.role === "OWNER" || me.role === "OPERATOR") && inc.state !== "RESOLVED" && <LabControls id={inc.id} />}
+          {inc.origin === "MOCK_SCENARIO" && (me.role === "OWNER" || me.role === "OPERATOR") && (inc.state === "RESOLVED" ? inc.settledBy === "REPLACEMENT" : !(inc.state === "ESCALATED" && inc.settledBy)) && (
+            <LabControls id={inc.id} resolved={inc.state === "RESOLVED"} />
+          )}
           {d.estimate && <CostEstimateCard e={d.estimate} currency={d.obligation.currency} />}
           <Card title={`Evidence (${d.evidence.length})`}>
             {d.evidence.length === 0 ? <p className="text-sm text-ink-dim">No evidence attached.</p> : <ul className="space-y-3">{d.evidence.map((e) => <EvidenceItem key={e.id} e={e} />)}</ul>}

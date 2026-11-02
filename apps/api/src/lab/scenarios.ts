@@ -17,11 +17,14 @@ import {
   executeReplacement,
   getIncident,
   ingestSupplierMessage,
+  loadTransferHistory,
   openIncident,
   paymentsForObligation,
+  recheckResolvedIncident,
   recordTransferSnapshot,
   registerOriginalPayment,
   schema,
+  syncLedgerForObligation,
 } from "@sentinel/db";
 import { and, eq } from "drizzle-orm";
 import type { MockProvider } from "./mock-provider.js";
@@ -46,6 +49,7 @@ export const LAB_EVENTS = [
   "ORIGINAL_FAILED_BANK_RETURN",
   "ORIGINAL_PAID",
   "REPLACEMENT_PAID",
+  "REPLACEMENT_RETURNED_AFTER_PAID",
   "SUPPLIER_CHASER_EMAIL",
   "SUPPLIER_FRAUD_EMAIL",
   "WALLET_LOW",
@@ -142,6 +146,16 @@ export async function applyLabEvent(db: Db, provider: MockProvider | null, organ
       if (!rep) throw new SafetyError("no dispatched replacement to mark PAID");
       await recordTransferSnapshot(db, organizationId, t(rep, { status: "SENT" }), "poll");
       await recordTransferSnapshot(db, organizationId, t(rep, { status: "PAID" }), "poll");
+      break;
+    }
+    case "REPLACEMENT_RETURNED_AFTER_PAID": {
+      // Airwallex documents that PAID can still fail. A resolved incident must reopen.
+      const rep = pays.find((p) => p.role === "REPLACEMENT" && p.providerTransferId);
+      if (!rep || (await loadTransferHistory(db, organizationId, rep.providerTransferId!)).status !== "PAID") throw new SafetyError("no PAID replacement to return");
+      await recordTransferSnapshot(db, organizationId, t(rep, { status: "FAILED", failure: { code: "BANK_RETURN", message: "Returned after PAID by beneficiary bank (SIMULATED)", details: { type: "BENEFICIARY_BANK_RETURNED" } } }), "poll");
+      await recordTransferSnapshot(db, organizationId, t(rep, { status: "CANCELLED", failure: {} }), "poll");
+      await recheckResolvedIncident(db, organizationId, incidentId, actor);
+      await syncLedgerForObligation(db, organizationId, inc.obligationId);
       break;
     }
     case "SUPPLIER_CHASER_EMAIL":

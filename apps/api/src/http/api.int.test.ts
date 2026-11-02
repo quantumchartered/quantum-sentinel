@@ -138,6 +138,47 @@ describe("Scenario A over HTTP (MOCK provider, MOCK AI)", () => {
   });
 });
 
+describe("After resolution: PAID can still fail", () => {
+  async function resolvedScenarioA(): Promise<string> {
+    const { json } = await call("operator", "POST", "/api/lab/scenarios", { scenario: "A", mode: "MOCK" });
+    const id = json.incidentId as string;
+    await call("operator", "POST", `/api/lab/incidents/${id}/events`, { event: "ORIGINAL_FAILED_BANK_RETURN" });
+    await call("operator", "POST", `/api/incidents/${id}/evaluate`);
+    const { json: p } = await call("operator", "POST", `/api/incidents/${id}/propose`);
+    expect((await call("approver", "POST", `/api/proposals/${p.proposalId}/approve`)).json).toMatchObject({ approved: true });
+    await call("operator", "POST", `/api/lab/incidents/${id}/events`, { event: "REPLACEMENT_PAID" });
+    expect((await call("operator", "POST", `/api/incidents/${id}/resolve`)).json).toEqual({ resolved: true });
+    return id;
+  }
+
+  it("a late return of the settling replacement reopens and escalates; nothing is re-sent and the payable reopens", async () => {
+    const id = await resolvedScenarioA();
+    expect((await call("operator", "POST", `/api/lab/incidents/${id}/events`, { event: "REPLACEMENT_RETURNED_AFTER_PAID" })).status).toBe(200);
+    const d = (await call("viewer", "GET", `/api/incidents/${id}`)).json;
+    expect(d.incident.state).toBe("ESCALATED");
+    expect(d.incident.escalationReason).toContain("settled_payment_failed_after_paid:REPLACEMENT:BENEFICIARY_BANK_RETURNED");
+    // The returned replacement still blocks the invoice: only a person can decide what happens next.
+    expect(d.payments.find((p: { role: string }) => p.role === "REPLACEMENT")).toMatchObject({ blocking: true, finality: { kind: "FAILED_AFTER_PAID" } });
+    expect(d.ledger).toMatchObject({ "SUPPLIER_PAYABLE:USD": "-2500000", "WALLET:USD": "0", "IN_TRANSIT:USD": "0" });
+    expect((await call("operator", "POST", `/api/incidents/${id}/propose`)).status).toBe(409);
+    expect((await call("operator", "POST", `/api/incidents/${id}/resend`)).json).toMatchObject({ blocked: true });
+    const replay = (await call("viewer", "GET", `/api/incidents/${id}/replay`)).json;
+    expect(replay.audit.map((x: { type: string }) => x.type)).toContain("incident.reopened");
+    // Re-checking again changes nothing.
+    expect((await call("operator", "POST", "/api/reconcile")).json.reopened.map((r: { incidentId: string }) => r.incidentId)).not.toContain(id);
+  });
+
+  it("reconciliation reopens a resolved incident when the replaced original turns out to have been PAID", async () => {
+    const id = await resolvedScenarioA();
+    // A late PAID for the returned original: it was paid before it failed, which the replacement assumed it never was.
+    await call("operator", "POST", `/api/lab/incidents/${id}/events`, { event: "ORIGINAL_PAID" });
+    expect((await call("viewer", "GET", `/api/incidents/${id}`)).json.incident.state).toBe("RESOLVED");
+    const rec = (await call("operator", "POST", "/api/reconcile")).json;
+    expect(rec.reopened).toContainEqual({ incidentId: id, reasons: ["unsettled_payment_was_paid:ORIGINAL"] });
+    expect((await call("viewer", "GET", `/api/incidents/${id}`)).json.incident.state).toBe("ESCALATED");
+  });
+});
+
 describe("Scenario B and C over HTTP", () => {
   it("B: 10 racing approvals and executors produce one approval and one provider transfer", async () => {
     const { json } = await call("operator", "POST", "/api/lab/scenarios", { scenario: "B", mode: "MOCK" });

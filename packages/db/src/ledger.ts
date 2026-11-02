@@ -84,6 +84,18 @@ export const journals = {
       { account: "IN_TRANSIT" as const, amountMinor: -p.amountMinor },
     ],
   }),
+  /** PAID, then failed (a late return): the payable reopens and the money is back in the wallet. */
+  paidReversed: (p: PaymentLike) => ({
+    key: `payment:${p.id}:paid_reversed`,
+    currency: p.currency,
+    memo: "paid transfer failed later and was returned",
+    obligationId: p.obligationId,
+    paymentId: p.id,
+    lines: [
+      { account: "WALLET" as const, amountMinor: p.amountMinor },
+      { account: "SUPPLIER_PAYABLE" as const, amountMinor: -p.amountMinor },
+    ],
+  }),
   /** Confirmed failure: funds come back to the wallet. (Fees are not modelled yet.) */
   returned: (p: PaymentLike) => ({
     key: `payment:${p.id}:returned`,
@@ -115,6 +127,10 @@ export async function syncLedgerForObligation(db: Db, organizationId: string, ob
       const h = await loadTransferHistory(tx, organizationId, p.providerTransferId);
       if (p.state === "FAILED_CONFIRMED") await postJournal(tx, organizationId, journals.returned(p));
       else if (h.status === "PAID" && classifyFinality(h).kind === "PAID_NOT_FINAL") await postJournal(tx, organizationId, journals.paid(p));
+      else if (classifyFinality(h).kind === "FAILED_AFTER_PAID") {
+        await postJournal(tx, organizationId, journals.paid(p));
+        await postJournal(tx, organizationId, journals.paidReversed(p));
+      }
     }
   });
 }

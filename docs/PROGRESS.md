@@ -43,6 +43,8 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **TLA+ model** of no double payment, checked by TLC (16-row matrix: design, pre-fix design, each defence removed, reachability witnesses) | `spec/`, `spec/RESULTS.md` | `pnpm spec`: design holds up to 3 workers / 3 replacements / 4 claims (1.4M states). Found a real race (stale worker released the fence while another sent); fixed in `execution.ts` (`releaseOrHold`, D68) and replayed in 4 integration tests that fail on the old rule |
 | **Arrival and cost estimate** (advisory, labelled illustrative priors; never feeds `decide()`, never prices a forbidden replacement) | `packages/policy/src/estimate.ts`, `GET /api/incidents/:id` (`estimate`), Incident Workspace card | 14 unit tests incl. fast-check; API and browser assertions on Scenario A |
 | **Should-tier screens**: Agent Activity (runs, tool calls, verifier, tokens, cost) and Reconciliation (run, findings, ledger, provider transfers) | `apps/web/src/pages/{AgentActivity,Reconciliation}.tsx`, `GET /api/agent-runs`, `GET /api/reconciliation` | API test (roles, tenant isolation); 2 Playwright tests + 375px check |
+| **Reopen after resolution**: a late failure of the settling payment, a PAID on the replaced one, or a history conflict reopens and escalates; ledger books the return; worker tick + every reconciliation; Lab event "Paid replacement returned later" | `recheckResolvedIncident(s)` in `packages/db/src/execution.ts`, `ledger.ts` (`paidReversed`), `apps/api/src/main.ts` | 2 API tests (mutation-checked), 1 Playwright test |
+| **Clean-install rehearsal** (Nov 2): fresh clone → `pnpm install --frozen-lockfile` → lint, typecheck, 183 unit tests → `docker compose up --build` on an empty database → Scenario A resolved, reconciliation OK, audit verified | — | Manual run, recorded here |
 | **SECURITY_AND_LIMITATIONS.md** and the as-built architecture diagram (README) | root | Doc; every claim points at code or a test |
 | CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
 
@@ -53,7 +55,7 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck (API + web), 183 unit tests, 127 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck (API + web), 183 unit tests, 129 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
 - Console run: see README "Run the console". The preview launch config is in `.claude/launch.json` (`api`, `web`).
 
 Browser check (Oct 27, built-in browser pane, MOCK mode):
@@ -63,7 +65,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 - Also checked: the not-found error state, the empty approval queue, and no horizontal overflow on 8 pages at 375px.
 - Two UX bugs were found and fixed during the check: stale action results after a decision change, and approval outcomes disappearing.
 - `pnpm test`: unit tests only.
-- `pnpm test:e2e`: 13 Playwright browser tests (needs Docker and Google Chrome). Last run: all passing.
+- `pnpm test:e2e`: 14 Playwright browser tests (needs Docker and Google Chrome). Last run: all passing.
 - `docker compose up --build` (or `pnpm up`): the whole app on http://localhost:4000.
 
 ## Founder steps (only you can do these)
@@ -78,14 +80,14 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 
 1. With keys: run the sandbox feasibility sequence. Wire `airwallexExecutionProvider` into a sandbox Scenario A run.
 2. With an Anthropic key (ANTHROPIC_API_KEY in `.env`, or `ant auth login`): `pnpm investigate <incidentId>` on a local incident. Tune the prompt only if the verifier rejects real reports.
-3. Without keys: T4 is done (attacks, eval, TLA+, estimate, Should-tier screens). T5 remains: the REOPEN path for a failure after PAID, posting fees to the ledger, and the demo recording (founder). The Could-tier screens (Analytics, Organization Settings) are optional.
+3. Without keys: T4 is done (attacks, eval, TLA+, estimate, Should-tier screens). T5 remains: posting fees to the ledger and the demo recording (founder). The REOPEN path and the clean-install rehearsal are done. The Could-tier screens (Analytics, Organization Settings) are optional.
 
 ## Known gaps and shortcuts
 
 - **No sandbox contract evidence yet.** Decoders follow the official reference and fail closed.
 - `getBeneficiary` returns raw JSON. The beneficiary hash uses `beneficiary.bank_details` (unconfirmed shape); if it is absent, execution is blocked.
 - The executor uses `transferMethod: "LOCAL"`, `reason: "goods_purchased"`, and source currency = payment currency. Fees are not posted to the ledger yet.
-- Resolution uses PAID as "settled" for the sandbox demo, although Airwallex documents that PAID can still fail. A late failure after resolution needs a REOPEN path, which is not wired yet.
+- Resolution uses PAID as "settled", although Airwallex documents that PAID can still fail. Resolved incidents are re-checked and reopen + escalate on a late failure (D71); detection waits for the webhook or the next poll.
 - Webhooks and the backup poller are wired to one tenant (`SENTINEL_ORGANIZATION_ID`). The API itself is tenant-scoped by user. Per-tenant provider connections and webhook secrets are not built.
 - Scenario Lab SANDBOX mode is not built (needs keys). In the UI it shows as "needs keys".
 - The MockProvider keeps the simulated wallet in memory. It resets per scenario and on API restart.

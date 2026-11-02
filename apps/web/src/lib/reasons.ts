@@ -28,6 +28,15 @@ export function explainReason(code: string): string {
   const insufficient = /^balance:insufficient:need_(\d+)_have_(\d+)$/.exec(code);
   if (insufficient) return `The wallet does not cover the amount plus fees (needs ${insufficient[1]}, has ${insufficient[2]} minor units).`;
   if (code === "four_eyes:approver_is_proposer") return EXACT.four_eyes_approver_is_proposer!;
+  const reopened = /^(settled_payment_failed_after_paid|second_payment_paid|unsettled_payment_was_paid|payment_history_conflict):(ORIGINAL|REPLACEMENT)(?::(.+))?$/.exec(code);
+  if (reopened) {
+    const which = reopened[2] === "ORIGINAL" ? "original" : "replacement";
+    if (reopened[1] === "settled_payment_failed_after_paid") return `The ${which} payment that settled this invoice failed after PAID (${(reopened[3] ?? "type unknown").replaceAll("_", " ").toLowerCase()}). The invoice is unpaid again.`;
+    if (reopened[1] === "second_payment_paid") return `The ${which} payment also shows PAID: the supplier may have been paid twice.`;
+    if (reopened[1] === "unsettled_payment_was_paid") return `The ${which} payment now shows it was PAID before it failed. The replacement assumed it never was, so a person must check whether the supplier was paid twice.`;
+    return `The ${which} payment's history is contradictory.`;
+  }
+  if (code.startsWith("reopened: ")) return `Reopened after resolution. ${code.slice(10).split(", ").map(explainReason).join(" ")}`;
   if (code.startsWith("changed:")) return `Approval invalid: ${code.slice(8)} changed since the approver saw it.`;
   if (code.startsWith("approval:")) return explainReason(code.slice(9));
   if (code.startsWith("policy:")) return explainReason(code.slice(7));
