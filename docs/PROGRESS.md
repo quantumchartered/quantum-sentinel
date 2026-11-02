@@ -40,6 +40,7 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **Adversarial attack suite** (33 attacks, outcome-checked) and scoreboard | `apps/api/src/attacks/`, `docs/ATTACKS.md` | 33 run / 0 succeeded; also inside `pnpm check` (35 tests); mutation-checked (four-eyes disabled -> TEN-05 succeeds) |
 | **Evaluation matrix** (24 cases, every §12 case type) | `apps/api/src/eval/`, `EVAL.md` | 24/24 pass; inside `pnpm check`; mutation-checked (ACCOUNT_CLOSED made replaceable -> E07 fails) |
 | **Policy tightening** (policy-2026-11-02.1): replaceable failure types only, missing provider record escalates, supplier receipt claims raise EVIDENCE_CONFLICT | `packages/policy/src/{decide,text-signals}.ts` | 22 unit tests |
+| **TLA+ model** of no double payment, checked by TLC (16-row matrix: design, pre-fix design, each defence removed, reachability witnesses) | `spec/`, `spec/RESULTS.md` | `pnpm spec`: design holds up to 3 workers / 3 replacements / 4 claims (1.4M states). Found a real race (stale worker released the fence while another sent); fixed in `execution.ts` (`releaseOrHold`, D68) and replayed in 4 integration tests that fail on the old rule |
 | CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
 
 Covered scenarios (MOCK provider, real Postgres):
@@ -49,7 +50,7 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck (API + web), 169 unit tests, 122 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck (API + web), 169 unit tests, 126 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
 - Console run: see README "Run the console". The preview launch config is in `.claude/launch.json` (`api`, `web`).
 
 Browser check (Oct 27, built-in browser pane, MOCK mode):
@@ -74,7 +75,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 
 1. With keys: run the sandbox feasibility sequence. Wire `airwallexExecutionProvider` into a sandbox Scenario A run.
 2. With an Anthropic key (ANTHROPIC_API_KEY in `.env`, or `ant auth login`): `pnpm investigate <incidentId>` on a local incident. Tune the prompt only if the verifier rejects real reports.
-3. Without keys: continue T4. The attack suite and the eval suite are done. Next the TLA+ model of the no-double-payment invariant, then the arrival-probability / expected-cost estimate.
+3. Without keys: continue T4. The attack suite, the eval suite and the TLA+ model are done. Next the arrival-probability / expected-cost estimate (labelled illustrative priors), then the Should-tier screens.
 
 ## Known gaps and shortcuts
 

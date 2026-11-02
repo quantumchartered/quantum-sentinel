@@ -324,6 +324,143 @@ describe("Scenario B: duplicates and races", () => {
     expect((await getIncident(db, org, incidentId)).state).toBe("ESCALATED");
     const [ex] = await db.select().from(executions).where(eq(executions.id, a.executionId));
     expect(ex?.status).toBe("REJECTED");
+    const [, rep] = await paymentsForObligation(db, org, (await getIncident(db, org, incidentId)).obligationId);
+    expect(rep).toMatchObject({ state: "NOT_SENT", blocking: false });
+  });
+
+  it("a retry after a timeout that cannot proceed keeps the fence (UNCERTAIN) and escalates", async () => {
+    const p = new FakeProvider();
+    const { proposalId, obligationId, incidentId } = await readyToApprove(p);
+    const a = await approveProposal(db, org, { proposedActionId: proposalId, approverId: "approver-1", keys: KEYS });
+    if (!a.ok) throw new Error("approve failed");
+    p.nextCreate = "uncertain_before_create";
+    expect((await executeReplacement(db, p, org, a.executionId, { keys: KEYS })).status).toBe("UNCERTAIN");
+    const r = await executeReplacement(db, p, org, a.executionId, { keys: KEYS, now: () => Date.now() + 5 * 60_000 });
+    expect(r.status).toBe("BLOCKED");
+    expect((r as { reasons: string[] }).reasons).toContain("fence_held:another_attempt_may_still_send");
+    const rep = (await paymentsForObligation(db, org, obligationId)).find((x) => x.role === "REPLACEMENT");
+    expect(rep).toMatchObject({ state: "UNCERTAIN", blocking: true });
+    expect((await getIncident(db, org, incidentId)).state).not.toBe("RESOLVED");
+  });
+});
+
+/**
+ * The interleavings TLC found (spec/RESULTS.md, row "pre-fix"), replayed against the real
+ * executor and Postgres. Worker 1 stalls inside revalidation until its lease has expired;
+ * worker 2 re-claims and sends; worker 1 then fails a revalidation read and is BLOCKED.
+ * Before the fix, worker 1 released the fence (NOT_SENT) while worker 2's transfer was live.
+ */
+describe("Model-checked interleavings: a stale worker must not release the fence", () => {
+  function gate() {
+    let open!: () => void;
+    const opened = new Promise<void>((r) => (open = r));
+    let arrive!: () => void;
+    const arrived = new Promise<void>((r) => (arrive = r));
+    return { open, opened, arrive, arrived };
+  }
+  /** Worker 1's view of the provider: the balance read stalls, then fails (a transient error). */
+  function stalledReads(p: FakeProvider, g: ReturnType<typeof gate>): ExecutionProvider {
+    return {
+      getTransfer: (id) => p.getTransfer(id),
+      findTransferByRequestId: (r) => p.findTransferByRequestId(r),
+      createTransfer: (i) => p.createTransfer(i),
+      getBeneficiaryHash: () => p.getBeneficiaryHash(),
+      getCurrentBalances: async () => {
+        g.arrive();
+        await g.opened;
+        throw new Error("ECONNRESET");
+      },
+    };
+  }
+  const afterLease = () => Date.now() + 5 * 60_000;
+
+  async function setup() {
+    const p = new FakeProvider();
+    const s = await readyToApprove(p);
+    const a = await approveProposal(db, org, { proposedActionId: s.proposalId, approverId: "approver-1", keys: KEYS });
+    if (!a.ok) throw new Error("approve failed");
+    return { p, ...s, executionId: a.executionId };
+  }
+  const replacementOf = async (obligationId: string) => (await paymentsForObligation(db, org, obligationId)).find((x) => x.role === "REPLACEMENT")!;
+
+  it("worker 2 finishes first, then stale worker 1 is BLOCKED: the payment stays DISPATCHED", async () => {
+    const { p, obligationId, executionId } = await setup();
+    const g1 = gate();
+    const w1 = executeReplacement(db, stalledReads(p, g1), org, executionId, { keys: KEYS });
+    await g1.arrived; // worker 1 claimed (attempt 1) and is stuck in revalidation
+
+    const w2 = await executeReplacement(db, p, org, executionId, { keys: KEYS, now: afterLease });
+    expect(w2.status).toBe("SUCCEEDED");
+    g1.open();
+    const r1 = await w1;
+    expect(r1.status).toBe("BLOCKED");
+    expect((r1 as { reasons: string[] }).reasons).toContain("fence_held:another_attempt_may_still_send");
+
+    expect(await replacementOf(obligationId)).toMatchObject({ state: "DISPATCHED", blocking: true });
+    const [ex] = await db.select().from(executions).where(eq(executions.id, executionId));
+    expect(ex?.status).toBe("SUCCEEDED");
+    expect(p.createCalls).toHaveLength(1);
+  });
+
+  it("worker 1 is BLOCKED while worker 2's create is in flight: the fence holds throughout", async () => {
+    const { p, obligationId, executionId } = await setup();
+    const g1 = gate();
+    const w1 = executeReplacement(db, stalledReads(p, g1), org, executionId, { keys: KEYS });
+    await g1.arrived;
+
+    // Worker 2 reaches the provider (the transfer now exists) but its response is held back.
+    const g2 = gate();
+    const sending: ExecutionProvider = {
+      getTransfer: (id) => p.getTransfer(id),
+      findTransferByRequestId: (r) => p.findTransferByRequestId(r),
+      getBeneficiaryHash: () => p.getBeneficiaryHash(),
+      getCurrentBalances: () => p.getCurrentBalances(),
+      createTransfer: async (i) => {
+        const res = await p.createTransfer(i);
+        g2.arrive();
+        await g2.opened;
+        return res;
+      },
+    };
+    const w2 = executeReplacement(db, sending, org, executionId, { keys: KEYS, now: afterLease });
+    await g2.arrived;
+
+    g1.open();
+    expect((await w1).status).toBe("BLOCKED");
+    // A live transfer exists; its payment must still block the obligation.
+    expect(await replacementOf(obligationId)).toMatchObject({ state: "UNCERTAIN", blocking: true });
+
+    g2.open();
+    expect((await w2).status).toBe("SUCCEEDED");
+    expect(await replacementOf(obligationId)).toMatchObject({ state: "DISPATCHED", blocking: true });
+    expect(p.createCalls).toHaveLength(1);
+    expect(await verifyStoredAuditChain(db, org)).toMatchObject({ ok: true });
+  });
+
+  it("stale worker 1's own create is REJECTED after worker 2 re-claimed and sent: nothing is released", async () => {
+    const { p, obligationId, executionId } = await setup();
+    const g1 = gate();
+    const rejectedLate: ExecutionProvider = {
+      getTransfer: (id) => p.getTransfer(id),
+      findTransferByRequestId: (r) => p.findTransferByRequestId(r),
+      getBeneficiaryHash: () => p.getBeneficiaryHash(),
+      getCurrentBalances: () => p.getCurrentBalances(),
+      createTransfer: async () => {
+        g1.arrive();
+        await g1.opened;
+        throw new AirwallexApiError(400, { code: "validation_failed" }, "/transfers/create");
+      },
+    };
+    const w1 = executeReplacement(db, rejectedLate, org, executionId, { keys: KEYS });
+    await g1.arrived; // worker 1 passed revalidation and its request is in flight
+
+    expect((await executeReplacement(db, p, org, executionId, { keys: KEYS, now: afterLease })).status).toBe("SUCCEEDED");
+    g1.open();
+    expect((await w1).status).toBe("REJECTED");
+
+    expect(await replacementOf(obligationId)).toMatchObject({ state: "DISPATCHED", blocking: true });
+    const [ex] = await db.select().from(executions).where(eq(executions.id, executionId));
+    expect(ex?.status).toBe("SUCCEEDED");
   });
 });
 

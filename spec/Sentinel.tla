@@ -175,18 +175,24 @@ Claim(e, r) ==
 
 NeedsLookup(e) == pay[job[e]] = "uncertain" \/ mine[e] > 1
 
-\* Releasing the fence (BLOCKED or REJECTED). The implemented rule: only the sole
-\* attempt may release; otherwise another attempt may still create the transfer, so the
-\* payment stays blocking (UNCERTAIN) and a person is asked.
+\* Releasing the fence (BLOCKED or REJECTED): releaseOrHold in execution.ts. Only the
+\* sole attempt may release, and only an open (INTENDED/UNCERTAIN) payment; after a
+\* re-claim another attempt may still create the transfer, so the payment stays blocking
+\* (UNCERTAIN) and a person is asked. With the defence off: the code before the fix,
+\* which wrote NOT_SENT unconditionally.
 ReleaseOrHold(r) ==
-  IF ~On("sole_attempt_release") \/ att[r] = 1
-    THEN [pay EXCEPT ![r] = "not_sent"]
-    ELSE [pay EXCEPT ![r] = IF @ \in {"intended", "uncertain"} THEN "uncertain" ELSE @]
+  IF ~On("sole_attempt_release") THEN [pay EXCEPT ![r] = "not_sent"]
+  ELSE IF att[r] = 1 THEN [pay EXCEPT ![r] = IF @ \in {"intended", "uncertain"} THEN "not_sent" ELSE @]
+  ELSE [pay EXCEPT ![r] = IF @ \in {"intended", "uncertain"} THEN "uncertain" ELSE @]
 
-\* finishSuccess: payments.state = DISPATCHED, execution SUCCEEDED (aborts if the index refuses).
+\* The execution row's outcome; a SUCCEEDED execution is never overwritten.
+ExecOutcome(r, st) == [ex EXCEPT ![r] = IF @ = "succeeded" /\ On("sole_attempt_release") THEN @ ELSE st]
+
+\* finishSuccess: payments.state = DISPATCHED, execution SUCCEEDED. The transaction aborts if
+\* the unique index refuses it, or if the payment was released: NOT_SENT is terminal (trigger).
 FinishSuccess(e) ==
   LET r == job[e]  p == [pay EXCEPT ![r] = "dispatched"] IN
-  /\ IF IndexAllows(p)
+  /\ IF IndexAllows(p) /\ pay[r] # "not_sent"
        THEN pay' = p /\ ex' = [ex EXCEPT ![r] = "succeeded"]
        ELSE UNCHANGED <<pay, ex>>                    \* transaction throws; nothing written
   /\ Done(e)
@@ -234,7 +240,7 @@ RevalidateBlock(e) ==
   /\ ReadyToRevalidate(e)
   /\ seen' = seen \cup {otr}
   /\ pay' = ReleaseOrHold(job[e])
-  /\ ex' = [ex EXCEPT ![job[e]] = "blocked"]
+  /\ ex' = ExecOutcome(job[e], "blocked")
   /\ Done(e)
   /\ UNCHANGED <<envVars, origPay, tr, stray, leaseLive, att>>
 
@@ -269,7 +275,7 @@ Finish(e) ==
   \/ pc[e] = "sent_ok" /\ FinishSuccess(e)
   \/ pc[e] = "sent_lost" /\ FinishUncertain(e)
   \/ /\ pc[e] = "rejected"
-     /\ pay' = ReleaseOrHold(job[e]) /\ ex' = [ex EXCEPT ![job[e]] = "rejected"]
+     /\ pay' = ReleaseOrHold(job[e]) /\ ex' = ExecOutcome(job[e], "rejected")
      /\ Done(e)
      /\ UNCHANGED <<envVars, seen, origPay, tr, stray, leaseLive, att>>
 

@@ -50,11 +50,14 @@ const ROWS = [
   },
   {
     id: "pre-fix",
-    title: "Current code: BLOCKED / REJECTED always release the fence",
+    title: "The design before this model: BLOCKED / REJECTED always released the fence",
     disabled: ["sole_attempt_release"],
     invariants: ["NoDoublePayment"],
     expect: "violates",
-    why: "FOUND BY TLC, NOT YET FIXED IN CODE. Worker 1 claims the replacement and stalls past its lease. Worker 2 re-claims it (attempt 2), passes revalidation and sends. Worker 1 resumes, its revalidation is BLOCKED (for example a transient balance-read error) and it writes NOT_SENT. A transfer is now live with no fence, so a person can approve a second replacement, which is also sent. Planned fix in packages/db/src/execution.ts: release only when executions.attempts = 1; otherwise keep the payment UNCERTAIN and escalate.",
+    why:
+      "**Found by TLC, now fixed.** Worker 1 claims the replacement and stalls past its lease. Worker 2 re-claims it (attempt 2), passes revalidation and sends. Worker 1 resumes, its revalidation is BLOCKED (for example a transient balance-read error) and it writes NOT_SENT, which is terminal, so worker 2 cannot even record its success. A transfer is live with no fence, so a person can approve a second replacement, which is also sent. " +
+      "The fix (`releaseOrHold` in packages/db/src/execution.ts) releases only when the execution has been claimed once and the payment is still open; otherwise the payment stays UNCERTAIN (blocking) and the incident escalates. " +
+      "The interleavings are replayed against the real executor and Postgres in packages/db/src/safety.int.test.ts (\"Model-checked interleavings\"), and those tests fail if the old rule is restored.",
   },
   {
     id: "no-typed-failure",

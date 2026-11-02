@@ -261,12 +261,16 @@ export async function executeReplacement(
     if (!d.replacementAllowed) reasons.push(...d.reasons.map((r) => `policy:${r}`));
 
     if (reasons.length) {
-      await tx.update(payments).set({ state: "NOT_SENT" }).where(and(eq(payments.organizationId, organizationId), eq(payments.id, payment.id)));
-      await tx.update(executions).set({ status: "BLOCKED", lastError: reasons.join("; "), updatedAt: new Date() }).where(eq(executions.id, claimed.id));
+      const fence = await releaseOrHold(tx, organizationId, claimed.id, payment.id);
+      if (fence === "held") reasons.push("fence_held:another_attempt_may_still_send");
+      await tx
+        .update(executions)
+        .set({ status: "BLOCKED", lastError: reasons.join("; "), updatedAt: new Date() })
+        .where(and(eq(executions.id, claimed.id), sql`${executions.status} <> 'SUCCEEDED'`));
       if (incident.state === "EXECUTING") {
         await applyTransition(tx, organizationId, incident, { type: "ESCALATE", reason: `execution blocked: ${reasons.join("; ")}` }, "executor");
       }
-      await appendAudit(tx, organizationId, { actor: "executor", eventType: "execution.blocked", payload: { executionId: claimed.id, paymentId: payment.id, reasons } });
+      await appendAudit(tx, organizationId, { actor: "executor", eventType: "execution.blocked", payload: { executionId: claimed.id, paymentId: payment.id, reasons, fence } });
       return "blocked" as const;
     }
     await appendAudit(tx, organizationId, { actor: "executor", eventType: "execution.revalidated", payload: { executionId: claimed.id, paymentId: payment.id } });
@@ -322,14 +326,42 @@ async function finishUncertain(db: Db, org: string, executionId: string, payment
 
 async function finishRejected(db: Db, org: string, executionId: string, paymentId: string, err: AirwallexApiError): Promise<ExecuteResult> {
   await db.transaction(async (tx) => {
-    // A definite provider rejection means no transfer exists: release this payment, escalate the incident.
-    await tx.update(payments).set({ state: "NOT_SENT" }).where(and(eq(payments.organizationId, org), eq(payments.id, paymentId)));
-    await tx.update(executions).set({ status: "REJECTED", lastError: err.message, updatedAt: new Date() }).where(eq(executions.id, executionId));
+    // A definite provider rejection means no transfer exists under this request_id right now:
+    // release this payment (if no other attempt can still send it) and escalate the incident.
+    const fence = await releaseOrHold(tx, org, executionId, paymentId);
+    await tx
+      .update(executions)
+      .set({ status: "REJECTED", lastError: err.message, updatedAt: new Date() })
+      .where(and(eq(executions.id, executionId), sql`${executions.status} <> 'SUCCEEDED'`));
     const payment = await getPayment(tx, org, paymentId);
     await transitionIncidentForPayment(tx, org, payment, { type: "ESCALATE", reason: `provider rejected replacement: ${err.code ?? err.status}` });
-    await appendAudit(tx, org, { actor: "executor", eventType: "execution.rejected", payload: { executionId, paymentId, code: err.code ?? null, status: err.status } });
+    await appendAudit(tx, org, { actor: "executor", eventType: "execution.rejected", payload: { executionId, paymentId, code: err.code ?? null, status: err.status, fence } });
   });
   return { status: "REJECTED", error: err.message };
+}
+
+/**
+ * Release the replacement's duplicate fence (NOT_SENT, which is terminal) only when no
+ * other attempt can still reach the provider, i.e. this execution has been claimed once.
+ * After a re-claim, the earlier worker may not be dead: its lease expired, but it can
+ * still be about to send, or have sent. Then the payment keeps blocking as UNCERTAIN and
+ * a person decides; a later success or lookup by request_id settles it.
+ * Found by model checking: spec/RESULTS.md, row "pre-fix".
+ */
+async function releaseOrHold(tx: Tx, org: string, executionId: string, paymentId: string): Promise<"released" | "held"> {
+  // Row lock: a concurrent claim (which increments attempts) waits for this transaction.
+  const [row] = await tx
+    .select({ attempts: executions.attempts })
+    .from(executions)
+    .where(and(eq(executions.organizationId, org), eq(executions.id, executionId)))
+    .for("update");
+  const open = and(eq(payments.organizationId, org), eq(payments.id, paymentId), inArray(payments.state, ["INTENDED", "UNCERTAIN"]));
+  if (row?.attempts === 1) {
+    await tx.update(payments).set({ state: "NOT_SENT" }).where(open);
+    return "released";
+  }
+  await tx.update(payments).set({ state: "UNCERTAIN" }).where(open);
+  return "held";
 }
 
 async function transitionIncidentForPayment(
