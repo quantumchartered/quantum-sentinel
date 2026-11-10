@@ -75,6 +75,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 - Console sign-in for the sandbox tenant: `pnpm seed:demo --to-file` rotates the demo users' tokens into `.local/demo-tokens.json` (git-ignored, never printed).
 - Sandbox screenshots: `node e2e/sandbox-shots.mjs <incidentId>` with the API on :4000.
 - Local branch `main` points at the finished work; nothing is pushed (no remote yet).
+- Captioned demo video (2:58, silent): `node e2e/demo-video.mjs <sandboxIncidentId>` → `.local/video/quantum-sentinel-demo.webm` (git-ignored; Playwright's ffmpeg is needed: `npx playwright install ffmpeg`).
 
 ## Founder steps (only you can do these)
 

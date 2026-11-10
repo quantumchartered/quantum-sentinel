@@ -1,5 +1,7 @@
 # Demo video script (target 4:30, limit 5:00)
 
+> **A ready-made, captioned (silent) recording exists:** `node e2e/demo-video.mjs <sandboxIncidentId>` with the API running writes `.local/video/quantum-sentinel-demo.webm` (about 3 minutes; git-ignored). It follows this script, shows the real sandbox run labelled "Recorded sandbox run", and needs no voice. Use the script below if you prefer to record yourself with narration.
+
 Read the **Say** lines out loud while doing the **Do** lines. Times are a guide. Practise once without recording.
 
 ## Before you press record
