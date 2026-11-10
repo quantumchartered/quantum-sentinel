@@ -16,6 +16,7 @@ import {
   type SignedApproval,
   classifyFinality,
   decide,
+  failureCause,
   signApproval,
   verifyApproval,
 } from "@sentinel/policy";
@@ -425,7 +426,7 @@ export async function recheckResolvedIncident(db: Db, organizationId: string, in
       if (!p.providerTransferId) continue;
       const f = classifyFinality(await loadTransferHistory(tx, organizationId, p.providerTransferId));
       const settling = p.role === incident.settledBy;
-      if (settling && f.kind === "FAILED_AFTER_PAID") reasons.push(`settled_payment_failed_after_paid:${p.role}:${f.failure?.type ?? "type_unknown"}`);
+      if (settling && f.kind === "FAILED_AFTER_PAID") reasons.push(`settled_payment_failed_after_paid:${p.role}:${failureCause(f.failure) ?? "type_unknown"}`);
       if (!settling && f.kind === "PAID_NOT_FINAL") reasons.push(`second_payment_paid:${p.role}`);
       if (!settling && f.kind === "FAILED_AFTER_PAID") reasons.push(`unsettled_payment_was_paid:${p.role}`);
       if (f.kind === "CONFLICT") reasons.push(`payment_history_conflict:${p.role}`);

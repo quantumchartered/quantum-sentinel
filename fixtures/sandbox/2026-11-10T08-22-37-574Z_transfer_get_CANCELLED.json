@@ -1,0 +1,78 @@
+{
+  "label": "SANDBOX fixture (redacted)",
+  "capturedAt": "2026-11-10T08:22:37.574Z",
+  "apiVersion": "2026-08-21",
+  "data": {
+    "id": "8ea62aae-0725-4674-bb76-23250cf88df6",
+    "request_id": "fdffcb99-4d19-4596-a441-4898ab9e63da",
+    "status": "CANCELLED",
+    "transfer_amount": 100,
+    "transfer_currency": "USD",
+    "transfer_method": "LOCAL",
+    "source_currency": "USD",
+    "fee_amount": 3,
+    "fee_currency": "USD",
+    "beneficiary_id": "56bdc45e-0b90-4a90-9818-5e2877bb0f38",
+    "reference": "PROBE-2",
+    "short_reference_id": "P261110-0KWVL2V",
+    "created_at": "2026-11-10T08:21:52+0000",
+    "updated_at": "2026-11-10T08:22:37+0000",
+    "failure": {
+      "code": "90802",
+      "message": "Beneficiary bank returned",
+      "details": {
+        "type": "INCORRECT_ROUTING"
+      }
+    },
+    "amount_beneficiary_receives": 100,
+    "amount_payer_pays": 103,
+    "beneficiary": {
+      "address": {
+        "city": "Seattle",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "Washington",
+        "street_address": "412 5th Avenue"
+      },
+      "bank_details": {
+        "account_currency": "USD",
+        "account_name": "Northwind Components Ltd",
+        "account_number": "[REDACTED]",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "[REDACTED]",
+        "bank_account_category": "Checking",
+        "bank_country_code": "US",
+        "bank_name": "JPMorgan Chase Bank, NA",
+        "local_clearing_system": "ACH"
+      },
+      "entity_type": "COMPANY",
+      "type": "BANK_ACCOUNT"
+    },
+    "dispatch_date": "2026-11-10",
+    "fee_paid_by": "PAYER",
+    "funding": {
+      "status": "FUNDED"
+    },
+    "payer": {
+      "additional_info": {
+        "business_incorporation_date": "2022-07-02",
+        "business_registration_number": "X12345678",
+        "business_registration_type": "COMPANY"
+      },
+      "address": {
+        "city": "East Bessieview",
+        "country_code": "PK",
+        "postcode": "19239",
+        "state": "Virginia",
+        "street_address": "20498 Reinaldo Key"
+      },
+      "company_name": "Sandbox Business",
+      "entity_type": "COMPANY"
+    },
+    "reason": "goods_purchased",
+    "remarks": "",
+    "source_amount": 100,
+    "swift_charge_option": "SHARED",
+    "transfer_date": "2026-11-10"
+  }
+}

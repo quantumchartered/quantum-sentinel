@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { type ApprovalBinding, type CurrentFacts, signApproval, verifyApproval } from "./approval.js";
 import { type AuditEntry, nextAuditEntry, verifyAuditChain } from "./audit-chain.js";
 import { canonicalJson, evidenceSetHash } from "./canonical.js";
-import { type DecisionInput, decide } from "./decide.js";
+import { type DecisionInput, decide, failureCause } from "./decide.js";
 import { type IncidentEvent, type IncidentSnapshot, transitionIncident } from "./incident.js";
 import type { Finality } from "./transfer-history.js";
 
@@ -331,5 +331,38 @@ describe("failure-type classes and missing records (policy-2026-11-02.1)", () =>
 
   it("no provider record at all escalates rather than waiting", () => {
     expect(decide({ ...base, original: { kind: "IN_FLIGHT", status: null } })).toMatchObject({ recommendation: "ESCALATE", reasons: ["original:no_provider_record"] });
+  });
+});
+
+describe("failure cause: the documented failure code is the provider fact", () => {
+  // Sandbox, verified 2026-11-10: every simulated failure carries details.type INCORRECT_ROUTING;
+  // the code and message match Airwallex's documented failure-code table.
+  const sandboxFailure = (code: string, message: string): Finality => ({
+    kind: "CONFIRMED_FAILED",
+    failure: { code, message, type: "INCORRECT_ROUTING", reasonCodes: [], observedWithStatus: "CANCELLED", firstSeenAt: "2026-11-10T08:22:37Z", source: "poll" },
+  });
+
+  it("a documented bank return (90802) is replaceable even though the sandbox labels it INCORRECT_ROUTING", () => {
+    expect(failureCause({ code: "90802", type: "INCORRECT_ROUTING" })).toBe("BENEFICIARY_BANK_RETURNED");
+    expect(decide({ ...base, original: sandboxFailure("90802", "Beneficiary bank returned") })).toMatchObject({ recommendation: "REPLACE" });
+  });
+
+  it("documented codes that are not safe to resend escalate, whatever the type says", () => {
+    expect(failureCause({ code: "90701", type: "BENEFICIARY_BANK_RETURNED" })).toBe("ACCOUNT_CLOSED");
+    expect(decide({ ...base, original: sandboxFailure("90701", "Account closed") }).reasons).toEqual(["original:failure_requires_review:ACCOUNT_CLOSED"]);
+  });
+
+  it("an undocumented code falls back to the recorded type, and the type alone decides", () => {
+    // 90602 "Insufficient funds" is what the sandbox returns for INSUFFICIENT_FUNDS, but it is not in the documented table.
+    expect(failureCause({ code: "90602", type: "INCORRECT_ROUTING" })).toBe("INCORRECT_ROUTING");
+    expect(decide({ ...base, original: sandboxFailure("90602", "Insufficient funds") }).recommendation).toBe("ESCALATE");
+    expect(failureCause({ code: null, type: "BENEFICIARY_BANK_RETURNED" })).toBe("BENEFICIARY_BANK_RETURNED");
+  });
+
+  it("no code and no type: still not proof of what happened", () => {
+    expect(failureCause({ code: null, type: null })).toBeNull();
+    expect(decide({ ...base, original: { kind: "CONFIRMED_FAILED", failure: { ...(confirmedFailed as { failure: object }).failure, code: null, type: null } } as Finality }).reasons).toEqual([
+      "original:failure_type_missing",
+    ]);
   });
 });

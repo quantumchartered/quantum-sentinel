@@ -11,6 +11,7 @@ import {
   type RiskFlag,
   canonicalJson,
   classifyFinality,
+  failureCause,
   decide,
   detectSupplierTextSignals,
   evidenceSetHash,
@@ -361,20 +362,21 @@ export async function providerStateVersion(db: Db | Tx, organizationId: string, 
 
 /**
  * Move a payment to FAILED_CONFIRMED (releasing the fence) only when its history
- * shows a confirmed failure WITH a failure type. Anything weaker keeps it blocking.
+ * shows a confirmed failure WITH a known cause (documented code or type). Anything weaker keeps it blocking.
  */
 export async function syncPaymentFinality(tx: Tx, organizationId: string, payment: PaymentRow) {
   const history = await loadTransferHistory(tx, organizationId, payment.providerTransferId ?? "");
   const finality = classifyFinality(history);
-  if (finality.kind === "CONFIRMED_FAILED" && finality.failure.type && (payment.state === "DISPATCHED" || payment.state === "UNCERTAIN")) {
+  const cause = finality.kind === "CONFIRMED_FAILED" ? failureCause(finality.failure) : null;
+  if (finality.kind === "CONFIRMED_FAILED" && cause && (payment.state === "DISPATCHED" || payment.state === "UNCERTAIN")) {
     await tx
       .update(payments)
-      .set({ state: "FAILED_CONFIRMED", failureType: finality.failure.type })
+      .set({ state: "FAILED_CONFIRMED", failureType: cause })
       .where(and(eq(payments.organizationId, organizationId), eq(payments.id, payment.id)));
     await appendAudit(tx, organizationId, {
       actor: "system",
       eventType: "payment.failure_confirmed",
-      payload: { paymentId: payment.id, providerTransferId: payment.providerTransferId, failureType: finality.failure.type },
+      payload: { paymentId: payment.id, providerTransferId: payment.providerTransferId, failureType: cause, failureCode: finality.failure.code },
     });
   }
   return { history, finality };

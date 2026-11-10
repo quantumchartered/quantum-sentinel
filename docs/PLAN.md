@@ -103,7 +103,7 @@ Exit: [API-RESEARCH.md](API-RESEARCH.md) gains a "Verified in sandbox" table. Ea
 - [x] `packages/contracts`: Money (bigint minor units, currency exponent table) and major↔minor conversion, with property tests
 - [x] `packages/airwallex`: sandbox-only base URL guard, token cache with single-flight refresh, typed Zod decoders, endpoint-specific retry policy, `request_id` generation, error normalization. Tested against a fake server
 - [x] `packages/db`: initial migration (organizations, provider_events, webhook_rejections, transfer_observations, provider_operations). Obligations, payments and evidence move to T2
-- [~] Scripts: fund wallet, create beneficiary, create transfer, transition (SENT / PAID / FAILED + type). Written (`pnpm sandbox`); §0.4 steps 6–10 against the real sandbox **not yet run** (no keys)
+- [x] Scripts: fund wallet, create beneficiary, create transfer, transition (SENT / PAID / FAILED + type). Run against the real sandbox on Nov 10 (SANDBOX-RUN.md); §0.4 step 10 (duplicate request_id) still open
 - [x] Webhook ingress (signature over raw body, dedup, persist before 200)
 - [ ] cloudflared tunnel + webhook subscription in the sandbox web app (needs keys)
 - [x] Backup poller. Test: "FAILED flips to CANCELLED in seconds" never loses the failure

@@ -28,7 +28,7 @@ Then open http://localhost:4000. Sign-in tokens for an owner, operator, approver
 - an advisory arrival and cost estimate from labelled illustrative priors, which never changes what policy allows;
 - an attack suite, an evaluation matrix and a TLA+ model of the no-double-payment rule.
 
-All three scenarios run end to end in the console in MOCK mode. **Nothing has run against the Airwallex sandbox or the live Claude API yet: the sandbox and Anthropic API keys are pending.** This project has not created any transfer, beneficiary, deposit or other sandbox resource. All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product will label them that way.
+All three scenarios run end to end in the console in MOCK mode. **Scenario A has also run end to end on the real Airwallex sandbox** (Nov 10): WAIT, resend blocked, a simulated bank return, REPLACE, a bound approval, a replacement with a new `request_id`, PAID, resolved. See [docs/SANDBOX-RUN.md](docs/SANDBOX-RUN.md) for the run, the verified endpoints and what the sandbox taught us. The live Claude API has not been used yet (no Anthropic key). All funds, suppliers, emails and demo outcomes are **sandbox or simulated**, and the product labels them that way.
 
 Start here:
 
@@ -81,6 +81,7 @@ Fill it in by following [SETUP.md](docs/SETUP.md). Keep keys out of chat, screen
 | `pnpm sandbox transition --id <id> --to FAILED --failure-type BENEFICIARY_BANK_RETURNED` | **Simulated** status change |
 | `pnpm sandbox watch --id <id>` | Polls quickly and prints every status change with timing |
 | `pnpm sandbox history --id <id>` | Shows what Sentinel knows and its finality classification |
+| `pnpm sandbox scenario-a --beneficiary <id>` | Runs Scenario A end to end on the sandbox through the product's own functions |
 | `pnpm api` | Operator API, webhook receiver, backup poller and executor worker on `:4000` |
 | `pnpm web` | Operator console on `:5173` (proxies `/api` to `:4000`) |
 | `pnpm seed:demo` | Creates the demo tenant and one sign-in token per role |
@@ -131,9 +132,9 @@ The model reads and explains. Code decides what is allowed, a person approves, a
 
 | Deliverable | Current result |
 | --- | --- |
-| Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK provider, Mock AI, real Postgres); not yet run on the sandbox |
+| Scenario A (WAIT → REPLACE → RESOLVED) | Runs end to end in the console and the API tests (MOCK), and **on the real Airwallex sandbox** (`pnpm sandbox scenario-a`, [recorded run](docs/SANDBOX-RUN.md)) |
 | Scenarios B (races) and C (fraud / reconciliation) | Run in the console and API tests (MOCK): B race gives 1 approval and 1 transfer; C escalates and blocks payment. Reconciliation mismatch is covered in DB tests (SYNTHETIC) |
-| Vitest / fast-check | 183 unit and 129 Postgres integration tests passing (`pnpm check`) |
+| Vitest / fast-check | 187 unit and 129 Postgres integration tests passing (`pnpm check`) |
 | Browser tests (Playwright) | 14 passing (`pnpm test:e2e`): sign-in, loading/error/empty states, Scenarios A, B, C, roles, Decision Replay, cost estimate, reopen after a late return, Agent Activity, Reconciliation, audit, no sideways scroll at 375px |
 | PAID can still fail | A resolved incident is re-checked; a late return of the settling payment reopens it and escalates to a person, with no automatic re-send (API and browser tests) |
 | Arrival and cost estimate | Advisory, from labelled illustrative priors (`packages/policy/src/estimate.ts`): Scenario A shows WAIT cheapest while the original is in flight and REPLACE cheapest after the bank return; a replacement policy forbids is never priced |

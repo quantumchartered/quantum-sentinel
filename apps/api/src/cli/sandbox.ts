@@ -10,6 +10,7 @@
  *   pnpm sandbox transition --id ID --to SENT|PAID|FAILED [--failure-type BENEFICIARY_BANK_RETURNED]
  *   pnpm sandbox watch --id ID [--seconds 20] [--interval-ms 500]
  *   pnpm sandbox history --id ID
+ *   pnpm sandbox scenario-a --beneficiary ID [--amount 25000]   Scenario A end to end on the sandbox
  *
  * Redacted responses are written to fixtures/sandbox/ as contract evidence.
  */
@@ -17,6 +18,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import {
+  AirwallexApiError,
   AirwallexClient,
   AirwallexUncertainOutcomeError,
   SimulationFailureTypeSchema,
@@ -28,7 +30,10 @@ import { majorToMinor, money } from "@sentinel/contracts";
 import { createDb, loadTransferHistory, migrate, recordTransferSnapshot, schema } from "@sentinel/db";
 import { classifyFinality } from "@sentinel/policy";
 import { eq } from "drizzle-orm";
+import { MOCK_MODEL_ID, MockInvestigatorModel } from "../agent/mock-investigator.js";
+import { DEFAULT_MODEL, anthropicModelClient } from "../agent/model.js";
 import { redact } from "./redact.js";
+import { runSandboxScenarioA } from "./sandbox-scenario.js";
 
 const FIXTURES = new URL("../../../../fixtures/sandbox/", import.meta.url);
 const CURRENCY = "USD" as const;
@@ -149,16 +154,20 @@ const commands: Record<string, () => Promise<void>> = {
     // Synthetic supplier. Bank numbers are the public examples from the Airwallex docs.
     const body: Record<string, unknown> = {
       nickname: "Northwind Components (SANDBOX)",
-      transfer_method: "LOCAL",
+      // Create takes an array (verified in the sandbox: a bare transfer_method is rejected);
+      // the generated form schema names the same field transfer_method.
+      transfer_methods: ["LOCAL"],
       beneficiary: {
         entity_type: "COMPANY",
+        type: "BANK_ACCOUNT",
         company_name: "Northwind Components Ltd (SANDBOX)",
-        address: { country_code: "US", street_address: "412 5th Avenue", city: "Seattle", state: "WA", postcode: "98104" },
+        address: { country_code: "US", street_address: "412 5th Avenue", city: "Seattle", state: "US-WA", postcode: "98104" },
         bank_details: {
           bank_country_code: "US",
           account_currency: CURRENCY,
           local_clearing_system: "ACH",
           account_name: "Northwind Components Ltd",
+          bank_account_category: "Checking",
           account_number: "50001121",
           account_routing_type1: "aba",
           account_routing_value1: "021000021",
@@ -166,13 +175,18 @@ const commands: Record<string, () => Promise<void>> = {
         },
       },
     };
-    // Do not guess: every required path in the generated schema must be present.
-    const fields = ((generated as { fields?: { path?: string; required?: boolean }[] }).fields ?? []).filter((f) => f.required && f.path);
-    const missing = fields
-      .map((f) => f.path!)
-      .filter((p) => p.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], body) === undefined);
-    if (missing.length) {
-      console.error(`Payload is missing schema-required fields: ${missing.join(", ")}. Not creating.`);
+    // Do not guess: every required path in the generated schema must be present and match its pattern.
+    const fields = ((generated as { fields?: { path?: string; required?: boolean; rule?: { pattern?: string } }[] }).fields ?? []).filter((f) => f.required && f.path);
+    const at = (p: string) =>
+      p === "transfer_method"
+        ? (body.transfer_methods as string[])[0]
+        : p.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], body);
+    const missing = fields.filter((f) => at(f.path!) === undefined).map((f) => f.path!);
+    const invalid = fields
+      .filter((f) => f.rule?.pattern && at(f.path!) !== undefined && !new RegExp(`^(?:${f.rule.pattern})$`).test(String(at(f.path!))))
+      .map((f) => f.path!);
+    if (missing.length || invalid.length) {
+      console.error(`Payload does not match the generated schema. Missing: ${missing.join(", ") || "none"}. Invalid: ${invalid.join(", ") || "none"}. Not creating.`);
       process.exitCode = 1;
       return;
     }
@@ -262,6 +276,31 @@ const commands: Record<string, () => Promise<void>> = {
     await db.$client.end();
   },
 
+  async "scenario-a"() {
+    const db = await database();
+    const useClaude = !!process.env.ANTHROPIC_API_KEY && process.env.SENTINEL_INVESTIGATOR !== "mock";
+    const secret = env("APPROVAL_HMAC_SECRET"); // same key version as the API ("env-1"), so the console can verify these approvals
+    console.log("SANDBOX Scenario A (simulated funds, synthetic supplier)");
+    try {
+      const r = await runSandboxScenarioA({
+        db,
+        client: airwallex(),
+        organizationId: env("SENTINEL_ORGANIZATION_ID"),
+        beneficiaryId: args.beneficiary ?? env("SENTINEL_BENEFICIARY_ID"),
+        amount: money(majorToMinor(args.amount ?? "25000", CURRENCY), CURRENCY),
+        keys: { current: { version: "env-1", secret }, all: { "env-1": secret } },
+        investigator: useClaude
+          ? { model: anthropicModelClient(), modelId: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL }
+          : { model: new MockInvestigatorModel(), modelId: MOCK_MODEL_ID },
+        log: (line) => console.log(line),
+      });
+      console.log(`\nincident ${r.incidentId}: ${r.ok ? "completed" : "completed with findings"}`);
+      if (!r.ok) process.exitCode = 1;
+    } finally {
+      await db.$client.end();
+    }
+  },
+
   async history() {
     const id = args.id ?? env("SENTINEL_TRANSFER_ID");
     const db = await database();
@@ -280,5 +319,9 @@ if (!run) {
 }
 run().catch((err: unknown) => {
   console.error(err instanceof Error ? `${err.name}: ${err.message}` : err);
+  if (err instanceof AirwallexApiError && err.details) print("  details:", err.details);
+  const cause = err instanceof AirwallexUncertainOutcomeError ? err.cause : undefined;
+  if (cause instanceof Error) console.error(`  cause: ${cause.name}: ${cause.message}`);
+  if (cause instanceof AirwallexApiError && cause.details) print("  cause details:", cause.details);
   process.exit(1);
 });

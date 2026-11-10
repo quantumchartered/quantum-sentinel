@@ -35,7 +35,8 @@ The arrival and cost estimate (`packages/policy/src/estimate.ts`) is **advisory*
 ## Known limitations
 
 **Not yet proven against real services**
-- Nothing has run against the real Airwallex sandbox: no keys yet. The adapter's decoders follow the official reference and fail closed, but no sandbox fixture confirms them.
+- Scenario A has run once end to end on the real Airwallex sandbox ([docs/SANDBOX-RUN.md](docs/SANDBOX-RUN.md)). Webhooks and duplicate `request_id` handling have not been exercised against it yet; the backup poller covered that run.
+- In the sandbox every failure carries the type `INCORRECT_ROUTING`; Sentinel classifies failures by Airwallex's documented failure code instead, and escalates on an undocumented code.
 - The investigator has only run with scripted MOCK models. Real-model citation discipline, verifier pass rate and cost per run are unmeasured.
 
 **Safety-model assumptions** (see [spec/README.md](spec/README.md))
@@ -47,7 +48,7 @@ The arrival and cost estimate (`packages/policy/src/estimate.ts`) is **advisory*
 **Product gaps**
 - Webhooks and the backup poller serve one tenant (`SENTINEL_ORGANIZATION_ID`). Per-tenant provider connections and webhook secrets are not built.
 - Fees are not posted to the ledger. The executor uses `LOCAL`, `goods_purchased`, and source currency = payment currency.
-- Scenario Lab has no SANDBOX mode yet (needs keys). The MOCK provider keeps its wallet in memory.
+- Scenario Lab in the console has no SANDBOX mode yet; the sandbox scenario runs from the CLI (`pnpm sandbox scenario-a`) and its incident then appears in the console. The MOCK provider keeps its wallet in memory.
 - Supplier-text screening is pattern-based and can be evaded by paraphrase. The beneficiary-details check at execution is the hard stop.
 - The audit chain detects edits, deletions and reordering. On its own it does not detect truncation of the newest entries or a privileged rewrite of the whole chain; exported checkpoints are not built.
 - Bearer tokens have no expiry or rotation, and there is no SSO, CSRF protection (not needed for bearer headers) or rate limiting.

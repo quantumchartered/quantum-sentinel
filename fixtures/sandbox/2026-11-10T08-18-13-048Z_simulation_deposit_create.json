@@ -1,0 +1,16 @@
+{
+  "label": "SANDBOX fixture (redacted)",
+  "capturedAt": "2026-11-10T08:18:13.048Z",
+  "apiVersion": "2026-08-21",
+  "data": {
+    "amount": 60000,
+    "create_time": "2026-11-10T08:18:12.000+00:00",
+    "currency": "USD",
+    "id": "74ff9b20-dbf6-41e8-b453-ca2ddc00b935",
+    "payer_name": "Sentinel Sandbox Funding",
+    "status": "PENDING",
+    "reference": "SIMULATED DEPOSIT",
+    "deposit_type": "Credit",
+    "statement_ref": "ae4c41aa-3793-47f7-ad5b-bed14d0590b9"
+  }
+}

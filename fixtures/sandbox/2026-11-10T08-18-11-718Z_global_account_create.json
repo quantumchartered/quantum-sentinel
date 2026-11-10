@@ -1,0 +1,81 @@
+{
+  "label": "SANDBOX fixture (redacted)",
+  "capturedAt": "2026-11-10T08:18:11.720Z",
+  "apiVersion": "2026-08-21",
+  "data": {
+    "id": "124370e6-a615-4ffd-81a5-bbab4ebfd3d0",
+    "status": "ACTIVE",
+    "country_code": "US",
+    "request_id": "a6435c8f-f04b-4c8a-bc3b-775255fea2b5",
+    "account_name": "Sandbox Business",
+    "account_number": "[REDACTED]",
+    "account_type": "Checking",
+    "institution": {
+      "address": "89-16 Jamaica Ave",
+      "city": "Woodhaven, NY",
+      "name": "Community Federal Savings Bank",
+      "zip_code": "11421"
+    },
+    "nick_name": "Sandbox Business",
+    "required_features": [
+      {
+        "currency": "USD",
+        "transfer_method": "LOCAL"
+      }
+    ],
+    "supported_features": [
+      {
+        "alias_types": [],
+        "currency": "USD",
+        "local_clearing_system": "ACH",
+        "routing_codes": [
+          {
+            "type": "ach",
+            "value": "[REDACTED]"
+          }
+        ],
+        "transfer_method": "LOCAL",
+        "type": "DEPOSIT"
+      },
+      {
+        "alias_types": [],
+        "currency": "USD",
+        "local_clearing_system": "FEDWIRE",
+        "routing_codes": [
+          {
+            "type": "fedwire",
+            "value": "[REDACTED]"
+          }
+        ],
+        "transfer_method": "LOCAL",
+        "type": "DEPOSIT"
+      },
+      {
+        "alias_types": [],
+        "currency": "USD",
+        "routing_codes": [
+          {
+            "type": "swift",
+            "value": "[REDACTED]"
+          }
+        ],
+        "transfer_method": "SWIFT",
+        "type": "DEPOSIT"
+      },
+      {
+        "alias_types": [],
+        "currency": "USD",
+        "local_clearing_system": "ACH",
+        "routing_codes": [
+          {
+            "type": "ach",
+            "value": "[REDACTED]"
+          }
+        ],
+        "transfer_method": "LOCAL",
+        "type": "DIRECT_DEBIT"
+      }
+    ],
+    "swift_code": "[REDACTED]"
+  }
+}

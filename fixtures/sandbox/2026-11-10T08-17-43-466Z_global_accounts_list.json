@@ -1,0 +1,372 @@
+{
+  "label": "SANDBOX fixture (redacted)",
+  "capturedAt": "2026-11-10T08:17:43.466Z",
+  "apiVersion": "2026-08-21",
+  "data": {
+    "items": [
+      {
+        "account_name": "Sandbox Business",
+        "account_number": "[REDACTED]",
+        "account_type": "Current",
+        "country_code": "HK",
+        "id": "68df3572-cd63-4048-b4ff-8fd6513504f9",
+        "institution": {
+          "address": "Ground Floor, The Center, 99 Queen's Road Central, Central",
+          "city": "Hong Kong SAR",
+          "name": "DBS Bank (Hong Kong) Limited"
+        },
+        "nick_name": "Sandbox Business",
+        "request_id": "4a7fd085-34c0-43a7-bd1f-e99d5e80d646#HKD",
+        "required_features": [
+          {
+            "currency": "HKD",
+            "transfer_method": "LOCAL"
+          }
+        ],
+        "status": "PROCESSING",
+        "supported_features": [
+          {
+            "alias_types": [],
+            "currency": "HKD",
+            "local_clearing_system": "ACH",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "HKD",
+            "local_clearing_system": "RTGS",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "HKD",
+            "local_clearing_system": "FPS",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "HKD",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "AUD",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "CAD",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "CHF",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "CNY",
+            "local_clearing_system": "ACH",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "CNY",
+            "local_clearing_system": "RTGS",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "CNY",
+            "local_clearing_system": "FPS",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "CNY",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "EUR",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "GBP",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "JPY",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "NZD",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "SGD",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "USD",
+            "local_clearing_system": "RTGS",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "LOCAL",
+            "type": "DEPOSIT"
+          },
+          {
+            "alias_types": [],
+            "currency": "USD",
+            "routing_codes": [
+              {
+                "type": "bank_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "branch_code",
+                "value": "[REDACTED]"
+              },
+              {
+                "type": "swift",
+                "value": "[REDACTED]"
+              }
+            ],
+            "transfer_method": "SWIFT",
+            "type": "DEPOSIT"
+          }
+        ],
+        "swift_code": "[REDACTED]"
+      }
+    ]
+  }
+}

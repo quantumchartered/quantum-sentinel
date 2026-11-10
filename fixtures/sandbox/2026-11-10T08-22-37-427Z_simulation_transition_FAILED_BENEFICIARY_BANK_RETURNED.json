@@ -1,0 +1,73 @@
+{
+  "label": "SANDBOX fixture (redacted)",
+  "capturedAt": "2026-11-10T08:22:37.429Z",
+  "apiVersion": "2026-08-21",
+  "data": {
+    "request_id": "fdffcb99-4d19-4596-a441-4898ab9e63da",
+    "id": "8ea62aae-0725-4674-bb76-23250cf88df6",
+    "transfer_currency": "USD",
+    "transfer_amount": 100,
+    "source_amount": 100,
+    "fee_currency": "USD",
+    "fee_amount": 3,
+    "fee_paid_by": "PAYER",
+    "amount_payer_pays": 103,
+    "amount_beneficiary_receives": 100,
+    "transfer_date": "2026-11-10",
+    "reason": "goods_purchased",
+    "reference": "PROBE-2",
+    "payer": {
+      "entity_type": "COMPANY",
+      "company_name": "Sandbox Business",
+      "address": {
+        "street_address": "20498 Reinaldo Key",
+        "country_code": "PK",
+        "postcode": "19239",
+        "state": "Virginia",
+        "city": "East Bessieview"
+      },
+      "additional_info": {
+        "business_registration_type": "COMPANY",
+        "business_registration_number": "X12345678",
+        "business_incorporation_date": "2022-07-02"
+      }
+    },
+    "beneficiary_id": "56bdc45e-0b90-4a90-9818-5e2877bb0f38",
+    "beneficiary": {
+      "type": "BANK_ACCOUNT",
+      "entity_type": "COMPANY",
+      "address": {
+        "street_address": "412 5th Avenue",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "Washington",
+        "city": "Seattle"
+      },
+      "bank_details": {
+        "bank_name": "JPMorgan Chase Bank, NA",
+        "bank_country_code": "US",
+        "account_name": "Northwind Components Ltd",
+        "account_number": "[REDACTED]",
+        "account_currency": "USD",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "[REDACTED]",
+        "local_clearing_system": "ACH",
+        "bank_account_category": "Checking"
+      }
+    },
+    "short_reference_id": "P261110-0KWVL2V",
+    "status": "FAILED",
+    "failure_reason": "90802: Beneficiary bank returned",
+    "failure_type": "INCORRECT_ROUTING",
+    "created_at": "2026-11-10T08:21:52+0000",
+    "updated_at": "2026-11-10T08:22:37+0000",
+    "transfer_method": "LOCAL",
+    "swift_charge_option": "SHARED",
+    "source_currency": "USD",
+    "dispatch_date": "2026-11-10",
+    "remarks": "",
+    "funding": {
+      "status": "FUNDED"
+    }
+  }
+}

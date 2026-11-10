@@ -4,7 +4,7 @@ Updated November 2, 2026 by Claude Code (T4 complete). Branch: `t4/attacks`, sta
 
 ## Current stopping point
 
-**T3b (HTTP API and operator console) is built, on top of T3a (investigator), T2 (safety core) and T1.** Scenarios A, B and C run end to end in the console in MOCK mode: a simulated provider and the labelled Mock AI. This was verified in a real browser. Everything is tested against MOCK provider data and a real local Postgres. **Nothing has run against the real Airwallex sandbox or the live Claude API yet.** No Anthropic key has been supplied, and for the sandbox the founder has not created the sandbox account and API key. Claude Code cannot do that step (creating accounts and handling API keys are off-limits for the agent). The founder steps are below.
+**T3b (HTTP API and operator console) is built, on top of T3a (investigator), T2 (safety core) and T1.** Scenarios A, B and C run end to end in the console in MOCK mode: a simulated provider and the labelled Mock AI. This was verified in a real browser. Everything is tested against MOCK provider data and a real local Postgres. **Update Nov 10: Scenario A ran end to end on the real Airwallex sandbox** with a scoped sandbox key the founder created ([SANDBOX-RUN.md](SANDBOX-RUN.md)). The live Claude API has still not been used (no Anthropic key).
 
 Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder at the same time as Claude Code. The founder stopped Codex and gave Claude Code sole ownership. Codex's tool pins (TS 6, Vitest 5, ESLint 10, pnpm 12) and its ESLint `parseFloat` rule were kept.
 
@@ -46,7 +46,8 @@ Ownership note: on Oct 27, Codex briefly wrote scaffold files into this folder a
 | **Reopen after resolution**: a late failure of the settling payment, a PAID on the replaced one, or a history conflict reopens and escalates; ledger books the return; worker tick + every reconciliation; Lab event "Paid replacement returned later" | `recheckResolvedIncident(s)` in `packages/db/src/execution.ts`, `ledger.ts` (`paidReversed`), `apps/api/src/main.ts` | 2 API tests (mutation-checked), 1 Playwright test |
 | **Clean-install rehearsal** (Nov 2): fresh clone → `pnpm install --frozen-lockfile` → lint, typecheck, 183 unit tests → `docker compose up --build` on an empty database → Scenario A resolved, reconciliation OK, audit verified | — | Manual run, recorded here |
 | **SECURITY_AND_LIMITATIONS.md** and the as-built architecture diagram (README) | root | Doc; every claim points at code or a test |
-| CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI not yet run** |
+| CLIs: `pnpm sandbox …`, `pnpm audit:verify`, `pnpm reconcile`, `pnpm investigate`, `pnpm seed:demo` | `apps/api/src/cli/*` | audit:verify and reconcile runtime-checked (tamper detected). **Sandbox CLI run against the real sandbox on Nov 10** (check, fund, beneficiary, transfer, transition, watch, scenario-a) |
+| **Sandbox Scenario A runner** and **failure classification by documented code** (D72, D73) | `apps/api/src/cli/sandbox-scenario.ts`, `failureCause` in `packages/policy/src/decide.ts` | Real sandbox run (SANDBOX-RUN.md); 4 unit tests |
 
 Covered scenarios (MOCK provider, real Postgres):
 - **A:** SENT → WAIT, and "Resend anyway" is blocked and audited. Then FAILED (bank return) followed by a bare CANCELLED → REPLACE → proposal → bound approval → executor → replacement PAID → RESOLVED with the original's fate recorded → books balance.
@@ -55,7 +56,7 @@ Covered scenarios (MOCK provider, real Postgres):
 - A fast-check property over concurrent interleavings with injected provider failures shows at most one replacement transfer ever reaches the provider.
 
 Commands:
-- `pnpm check`: lint, typecheck (API + web), 183 unit tests, 129 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
+- `pnpm check`: lint, typecheck (API + web), 187 unit tests, 129 Postgres integration tests (incl. the attack suite and the eval matrix) (Docker required). Last run: all passing.
 - Console run: see README "Run the console". The preview launch config is in `.claude/launch.json` (`api`, `web`).
 
 Browser check (Oct 27, built-in browser pane, MOCK mode):
@@ -84,7 +85,7 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 
 ## Known gaps and shortcuts
 
-- **No sandbox contract evidence yet.** Decoders follow the official reference and fail closed.
+- **Sandbox contract evidence exists for auth, balances, global accounts, deposit, beneficiary schema/create, transfer create/get and simulation** (fixtures/sandbox, SANDBOX-RUN.md). Webhooks and duplicate request_id are not yet verified.
 - `getBeneficiary` returns raw JSON. The beneficiary hash uses `beneficiary.bank_details` (unconfirmed shape); if it is absent, execution is blocked.
 - The executor uses `transferMethod: "LOCAL"`, `reason: "goods_purchased"`, and source currency = payment currency. Fees are not posted to the ledger yet.
 - Resolution uses PAID as "settled", although Airwallex documents that PAID can still fail. Resolved incidents are re-checked and reopen + escalate on a late failure (D71); detection waits for the webhook or the next poll.

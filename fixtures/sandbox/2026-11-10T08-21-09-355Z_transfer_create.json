@@ -1,0 +1,70 @@
+{
+  "label": "SANDBOX fixture (redacted)",
+  "capturedAt": "2026-11-10T08:21:09.355Z",
+  "apiVersion": "2026-08-21",
+  "data": {
+    "id": "6bb1e4c8-7e0d-4957-b011-7636e8f90d4e",
+    "request_id": "73d155da-2b0a-480f-8276-bb53744137be",
+    "status": "SCHEDULED",
+    "transfer_amount": 100,
+    "transfer_currency": "USD",
+    "transfer_method": "LOCAL",
+    "source_currency": "USD",
+    "fee_amount": 3,
+    "fee_currency": "USD",
+    "beneficiary_id": "56bdc45e-0b90-4a90-9818-5e2877bb0f38",
+    "reference": "PROBE-1",
+    "short_reference_id": "P261110-AO23EME",
+    "created_at": "2026-11-10T08:21:08+0000",
+    "updated_at": "2026-11-10T08:21:09+0000",
+    "amount_beneficiary_receives": 100,
+    "amount_payer_pays": 103,
+    "beneficiary": {
+      "address": {
+        "city": "Seattle",
+        "country_code": "US",
+        "postcode": "98104",
+        "state": "US-WA",
+        "street_address": "412 5th Avenue"
+      },
+      "bank_details": {
+        "account_currency": "USD",
+        "account_name": "Northwind Components Ltd",
+        "account_number": "[REDACTED]",
+        "account_routing_type1": "aba",
+        "account_routing_value1": "[REDACTED]",
+        "bank_account_category": "Checking",
+        "bank_country_code": "US",
+        "bank_name": "JPMorgan Chase Bank, NA",
+        "local_clearing_system": "ACH"
+      },
+      "entity_type": "COMPANY",
+      "type": "BANK_ACCOUNT"
+    },
+    "fee_paid_by": "PAYER",
+    "funding": {
+      "status": "FUNDED"
+    },
+    "payer": {
+      "additional_info": {
+        "business_incorporation_date": "2022-07-02",
+        "business_registration_number": "X12345678",
+        "business_registration_type": "COMPANY"
+      },
+      "address": {
+        "city": "East Bessieview",
+        "country_code": "PK",
+        "postcode": "19239",
+        "state": "Virginia",
+        "street_address": "20498 Reinaldo Key"
+      },
+      "company_name": "Sandbox Business",
+      "entity_type": "COMPANY"
+    },
+    "reason": "goods_purchased",
+    "remarks": "",
+    "source_amount": 100,
+    "swift_charge_option": "SHARED",
+    "transfer_date": "2026-11-10"
+  }
+}
