@@ -4,6 +4,7 @@
 // Usage: node e2e/demo-video.mjs <sandboxIncidentId> [path/to/sandbox-run.txt]
 // Output: .local/video/quantum-sentinel-demo.webm (git-ignored). Prints no tokens.
 import { readFileSync, renameSync } from "node:fs";
+import { setTimeout } from "node:timers";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
