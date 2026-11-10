@@ -69,6 +69,13 @@ Browser check (Oct 27, built-in browser pane, MOCK mode):
 - `pnpm test:e2e`: 14 Playwright browser tests (needs Docker and Google Chrome). Last run: all passing.
 - `docker compose up --build` (or `pnpm up`): the whole app on http://localhost:4000.
 
+## Submission kit (Nov 10)
+
+- Video script: [hackathon/VIDEO_SCRIPT.md](hackathon/VIDEO_SCRIPT.md). Submission text: [hackathon/SUBMISSION.md](hackathon/SUBMISSION.md).
+- Console sign-in for the sandbox tenant: `pnpm seed:demo --to-file` rotates the demo users' tokens into `.local/demo-tokens.json` (git-ignored, never printed).
+- Sandbox screenshots: `node e2e/sandbox-shots.mjs <incidentId>` with the API on :4000.
+- Local branch `main` points at the finished work; nothing is pushed (no remote yet).
+
 ## Founder steps (only you can do these)
 
 1. Create a sandbox account at sandbox.airwallex.com. Create an API key under Account → Developer → API keys.

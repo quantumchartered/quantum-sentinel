@@ -25,3 +25,18 @@ export async function authenticateToken(db: Db, token: string): Promise<UserRow 
   const [u] = await db.select().from(users).where(and(eq(users.tokenSha256, hashToken(token)), isNull(users.disabledAt)));
   return u ?? null;
 }
+
+/** Issue a new bearer token for an existing user; the old one stops working. Returns the new token (shown once). */
+export async function rotateUserToken(db: Db, organizationId: string, userId: string, actor = "system"): Promise<string> {
+  const token = `sst_${randomBytes(32).toString("base64url")}`;
+  await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(users)
+      .set({ tokenSha256: hashToken(token) })
+      .where(and(eq(users.organizationId, organizationId), eq(users.id, userId)))
+      .returning({ id: users.id });
+    if (updated.length !== 1) throw new Error("user not found in this organization");
+    await appendAudit(tx, organizationId, { actor, eventType: "user.token_rotated", payload: { userId } });
+  });
+  return token;
+}

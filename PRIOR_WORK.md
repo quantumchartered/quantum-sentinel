@@ -42,3 +42,12 @@ Recorded October 27, 2026, during Phase 0.
 ## Required follow-up
 
 Before importing prior work, record its source repository/path, author, license, original date, reused parts, and changes made during the hackathon. Add externally reused code and assets to this record. Do not represent templates, prior patterns, generated results, or unrun evaluations as new measured results.
+
+## Claude Code T4 and T5 (November 2–10, 2026), all written during the hackathon
+
+- Attack suite, evaluation matrix, TLA+ model (`spec/`, run with the TLA+ tools 1.7.4, MIT), executor race fix, cost estimate, Agent Activity and Reconciliation screens, reopen-after-PAID path, sandbox Scenario A runner, failure classification by documented code, security and submission documents. No Quantum Chartered code was read or copied.
+- Sandbox fixtures in `fixtures/sandbox/` are redacted responses from the team's own Airwallex sandbox account, recorded on November 10, 2026.
+
+## Still open for the founder
+
+- Confirm whether any of the patterns above (integer money, double-entry ledger, idempotency, row locking, provider adapter, redaction) mirror specific Quantum Chartered designs. If they do, list them here as "pre-existing pattern, re-implemented during the hackathon".

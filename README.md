@@ -17,8 +17,9 @@ Then open http://localhost:4000. Sign-in tokens for an owner, operator, approver
 | ![Incident Workspace: WAIT, resend blocked](docs/screenshots/06-workspace-wait-resend-blocked.png) | ![Decision Replay: WAIT to REPLACE](docs/screenshots/10-decision-replay.png) |
 | ![Approval Center: bound facts](docs/screenshots/08-approval-center.png) | ![Scenario C: escalated, payment blocked](docs/screenshots/11-scenario-c-escalated.png) |
 | ![Agent Activity: tool calls, verifier, cost](docs/screenshots/15-agent-activity.png) | ![Reconciliation: findings and ledger](docs/screenshots/16-reconciliation.png) |
+| ![Real Airwallex sandbox incident, resolved](docs/screenshots/20-sandbox-workspace-resolved.png) | ![Decision Replay of the sandbox run](docs/screenshots/21-sandbox-decision-replay.png) |
 
-*Screenshots are captured by the end-to-end tests (`pnpm test:e2e`) in MOCK mode.*
+*Screenshots are captured by the end-to-end tests (`pnpm test:e2e`) in MOCK mode; the last row shows the real Airwallex sandbox run (`node e2e/sandbox-shots.mjs`).*
 
 **Status: T4 advanced work done; T5 (ship) in progress.** Built and tested with a MOCK Airwallex, a MOCK AI and a real local Postgres:
 - the safety core: duplicate-payment fence, incident state machine, bound approvals, executor, audit chain and ledger;
@@ -39,6 +40,8 @@ Start here:
 - [docs/SETUP.md](docs/SETUP.md): sandbox account, MCP and secrets.
 - [PRIOR_WORK.md](PRIOR_WORK.md): what was built during the hackathon and what came before.
 - [SECURITY_AND_LIMITATIONS.md](SECURITY_AND_LIMITATIONS.md): the controls that protect money and data, and what is known to be missing.
+- [docs/SANDBOX-RUN.md](docs/SANDBOX-RUN.md): the recorded run on the real Airwallex sandbox.
+- [docs/hackathon/VIDEO_SCRIPT.md](docs/hackathon/VIDEO_SCRIPT.md) and [docs/hackathon/SUBMISSION.md](docs/hackathon/SUBMISSION.md): the demo video script and the submission text.
 
 ## Setup
 
